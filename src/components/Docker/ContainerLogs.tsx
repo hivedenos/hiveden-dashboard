@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { Card, Text, Stack, Group, Switch, NumberInput, Button, Code } from '@mantine/core';
 import { IconRefresh } from '@tabler/icons-react';
+import { getHttpBaseUrl } from '@/lib/shellClient';
 
 interface ContainerLogsProps {
   containerId: string;
@@ -37,7 +38,8 @@ export function ContainerLogs({ containerId }: ContainerLogsProps) {
 
     // Create new EventSource connection
     // Hardcoded to localhost:8000 as per original. Ideally should come from config.
-    const url = `http://localhost:8000/docker/containers/${containerId}/logs?follow=${follow}&tail=${tail}`;
+    const baseUrl = getHttpBaseUrl();
+    const url = `${baseUrl}/docker/containers/${containerId}/logs?follow=${follow}&tail=${tail}`;
     const eventSource = new EventSource(url);
 
     eventSource.onopen = () => {
