@@ -9,11 +9,19 @@ import type {
   DiskListResponse,
   DiskDetailResponse,
   StorageStrategyListResponse,
-  StorageStrategyApplyResponse
+  StorageStrategyApplyResponse,
+  MountRequest,
+  SuccessResponse
 } from '@/lib/client';
 
 export async function listStorageDevices(): Promise<DiskListResponse> {
   return StorageService.listDevicesStorageDevicesGet();
+}
+
+export async function mountPartition(data: MountRequest): Promise<SuccessResponse> {
+    const result = await StorageService.mountPartitionStorageMountPost(data);
+    // revalidatePath('/storage'); // Ideally revalidate relevant paths
+    return result;
 }
 
 export async function listStorageStrategies(): Promise<StorageStrategyListResponse> {

@@ -4,13 +4,37 @@
 /* eslint-disable */
 import type { DiskDetailResponse } from '../models/DiskDetailResponse';
 import type { DiskListResponse } from '../models/DiskListResponse';
+import type { MountRequest } from '../models/MountRequest';
 import type { StorageStrategy } from '../models/StorageStrategy';
 import type { StorageStrategyApplyResponse } from '../models/StorageStrategyApplyResponse';
 import type { StorageStrategyListResponse } from '../models/StorageStrategyListResponse';
+import type { SuccessResponse } from '../models/SuccessResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class StorageService {
+    /**
+     * Mount Partition
+     * Mounts a disk partition.
+     * @param requestBody
+     * @returns SuccessResponse Successful Response
+     * @throws ApiError
+     */
+    public static mountPartitionStorageMountPost(
+        requestBody: MountRequest,
+    ): CancelablePromise<SuccessResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/storage/mount',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                400: `Bad Request`,
+                422: `Validation Error`,
+                500: `Internal Server Error`,
+            },
+        });
+    }
     /**
      * List Devices
      * List all block devices on the system.
