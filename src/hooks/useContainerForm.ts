@@ -58,8 +58,18 @@ export function useContainerForm(initialValues?: Partial<ContainerFormState>): U
   const validateMounts = (mounts: Mount[]) => {
       const errors: Record<number, { source?: string }> = {};
       mounts.forEach((mount, index) => {
-          if (mount.source && !mount.source.startsWith('/')) {
-              errors[index] = { source: 'Source path must be absolute' };
+          if (mount.source) {
+              if (mount.is_app_directory) {
+                  // If is_app_directory is true, only allow relative paths
+                  if (mount.source.startsWith('/')) {
+                      errors[index] = { source: 'Source path must be relative for application directories' };
+                  }
+              } else {
+                  // If is_app_directory is false (or undefined), only allow absolute paths
+                  if (!mount.source.startsWith('/')) {
+                      errors[index] = { source: 'Source path must be absolute for system mounts' };
+                  }
+              }
           }
       });
       return errors;
@@ -142,7 +152,7 @@ export function useContainerForm(initialValues?: Partial<ContainerFormState>): U
       newMounts[index] = { ...newMounts[index], [field]: value };
 
       // Update validation for specific field or re-validate all
-      if (field === 'source') {
+      if (field === 'source' || field === 'is_app_directory') {
          // Optimistic update of errors for better perf than revalidating all
          // But revalidating all is safer to keep in sync.
          // Let's use the helper to ensure consistency
