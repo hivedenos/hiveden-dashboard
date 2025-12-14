@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import type { Disk, PackageStatus, StorageStrategy, DiskDetail, BtrfsVolume, BtrfsShare } from '@/lib/client';
-import { listStorageDevices, listStorageStrategies, applyStorageStrategy, getDiskDetails, listBtrfsVolumes, createBtrfsShare, listBtrfsShares } from '@/actions/storage';
+import type { Disk, PackageStatus, StorageStrategy, BtrfsVolume, BtrfsShare } from '@/lib/client';
+import { listStorageDevices, listStorageStrategies, applyStorageStrategy, listBtrfsVolumes, createBtrfsShare, listBtrfsShares } from '@/actions/storage';
 import { Container, Title, Text, Tabs, Button, Group, Stack, Modal, LoadingOverlay, Alert, TextInput, Select, Table, ThemeIcon, Badge } from '@mantine/core';
 import { useInterval } from '@mantine/hooks';
 import { IconDatabase, IconShare, IconAlertTriangle, IconFolderPlus, IconFolder } from '@tabler/icons-react';
+import { useRouter } from 'next/navigation';
 import { DiskInventory } from './DiskInventory';
 import { StrategyWizard } from './StrategyWizard';
 import { PrerequisitesBanner } from './PrerequisitesBanner';
 import { Terminal } from '@/components/Terminal/Terminal';
-import { DiskDetails } from './DiskDetails';
 import { getWebSocketUrl } from '@/lib/shellClient';
 
 interface StoragePageContentProps {
@@ -19,6 +19,7 @@ interface StoragePageContentProps {
 }
 
 export function StoragePageContent({ initialDisks, initialPackages }: StoragePageContentProps) {
+  const router = useRouter();
   const [disks, setDisks] = useState<Disk[]>(initialDisks);
   const [strategies, setStrategies] = useState<StorageStrategy[]>([]);
   const [isWizardOpen, setIsWizardOpen] = useState(false);
@@ -29,11 +30,6 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isTerminalOpen, setIsTerminalOpen] = useState(false);
   const [jobId, setJobId] = useState<string | null>(null);
-
-  // Disk Details State
-  const [selectedDiskDetail, setSelectedDiskDetail] = useState<DiskDetail | null>(null);
-  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
-  const [loadingDetails, setLoadingDetails] = useState(false);
 
   // Shares State
   const [btrfsVolumes, setBtrfsVolumes] = useState<BtrfsVolume[]>([]);
@@ -128,23 +124,8 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
     }
   };
 
-  const handleDiskClick = async (disk: Disk) => {
-    setLoadingDetails(true);
-    setIsDetailsOpen(true);
-    setSelectedDiskDetail(null); // Reset previous
-
-    try {
-      // Extract device name from path (e.g. /dev/sda -> sda)
-      const deviceName = disk.name; 
-      const response = await getDiskDetails(deviceName);
-      if (response.data) {
-        setSelectedDiskDetail(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to fetch disk details:', error);
-    } finally {
-      setLoadingDetails(false);
-    }
+  const handleDiskClick = (disk: Disk) => {
+    router.push(`/storage/${disk.name}`);
   };
 
   const handleOpenShareModal = async () => {
@@ -375,21 +356,6 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
           socketFactory={socketFactory}
           onClose={() => setIsTerminalOpen(false)}
         />
-      </Modal>
-
-      {/* Disk Details Modal */}
-      <Modal
-        opened={isDetailsOpen}
-        onClose={() => setIsDetailsOpen(false)}
-        title="Disk Details"
-        size="xl"
-      >
-        <div style={{ position: 'relative', minHeight: 200 }}>
-          <LoadingOverlay visible={loadingDetails} zIndex={1000} overlayProps={{ radius: "sm", blur: 2 }} />
-          {!loadingDetails && selectedDiskDetail && (
-            <DiskDetails disk={selectedDiskDetail} />
-          )}
-        </div>
       </Modal>
 
       {/* Create Share Modal */}

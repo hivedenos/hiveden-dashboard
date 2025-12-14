@@ -50,8 +50,19 @@ export function DiskDetails({ disk }: DiskDetailsProps) {
              </Badge>
              <Badge variant="outline">{disk.rotational ? 'HDD' : 'SSD'}</Badge>
              {disk.bus && <Badge variant="outline">{disk.bus}</Badge>}
+             {disk.raid_level && <Badge color="violet">{disk.raid_level}</Badge>}
           </Group>
         </Group>
+
+        {/* RAID Info */}
+        {disk.raid_group && (
+            <Card withBorder padding="sm" radius="sm" bg="var(--mantine-color-gray-0)">
+                <Group>
+                    <Text fw={600}>RAID Group:</Text>
+                    <Text>{disk.raid_group}</Text>
+                </Group>
+            </Card>
+        )}
 
         {/* Key Stats */}
         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md" mt="lg">
