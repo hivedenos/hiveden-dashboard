@@ -25,7 +25,7 @@ import { useState, useEffect, useMemo } from "react";
 import type { Container as DockerContainerInfo, EnvVar, Mount } from "@/lib/client";
 import { ContainerLogs } from "./ContainerLogs";
 import { Terminal } from "@/components/Terminal/Terminal";
-import { ShellService } from "@/actions/shellService";
+import { createDockerSession, closeSession } from "@/actions/shellService";
 import { getContainerConfiguration } from "@/actions/docker";
 import yaml from "js-yaml";
 
@@ -46,8 +46,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoadingShell, setIsLoadingShell] = useState(false);
   const [shellError, setShellError] = useState<string | null>(null);
-  const shellService = useMemo(() => new ShellService(), []);
-
+  
   // Compose YAML State
   const [composeYaml, setComposeYaml] = useState<string>("");
   const [isLoadingYaml, setIsLoadingYaml] = useState(false);
@@ -58,7 +57,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
         setIsLoadingShell(true);
         setShellError(null);
         try {
-          const session = await shellService.createDockerSession(container.Id, {
+          const session = await createDockerSession(container.Id, {
             user: "root",
             working_dir: "/",
           });
@@ -77,10 +76,10 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
     // Cleanup: close session when component unmounts
     return () => {
       if (sessionId) {
-        shellService.closeSession(sessionId).catch(console.error);
+        closeSession(sessionId).catch(console.error);
       }
     };
-  }, [activeTab, container.Id, container.State, sessionId, shellService]);
+  }, [activeTab, container.Id, container.State, sessionId]);
 
   // Fetch Compose YAML when tab is selected
   useEffect(() => {
@@ -149,7 +148,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
   const handleCloseShell = async () => {
     if (sessionId) {
       try {
-        await shellService.closeSession(sessionId);
+        await closeSession(sessionId);
         setSessionId(null);
         setActiveTab("info");
       } catch (error) {

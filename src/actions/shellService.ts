@@ -1,4 +1,6 @@
-"use service";
+"use server";
+
+const BASE_URL = "http://localhost:8000";
 
 export interface ShellSession {
   session_id: string;
@@ -18,131 +20,113 @@ export interface ShellOutput {
   timestamp: string;
 }
 
-export class ShellService {
-  private baseUrl: string;
-  private wsUrl: string;
+export async function createSession(
+  type: "local" | "ssh" | "docker",
+  target: string,
+  options?: {
+    user?: string;
+    working_dir?: string;
+  },
+): Promise<ShellSession> {
+  const response = await fetch(`${BASE_URL}/shell/sessions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ type, target, ...options }),
+  });
 
-  constructor(baseUrl: string = "http://localhost:8000") {
-    this.baseUrl = baseUrl;
-    this.wsUrl = baseUrl.replace("http://", "ws://").replace("https://", "wss://");
+  if (!response.ok) {
+    throw new Error(`Failed to create session: ${response.statusText}`);
   }
 
-  async createSession(
-    type: "local" | "ssh" | "docker",
-    target: string,
-    options?: {
-      user?: string;
-      working_dir?: string;
-    },
-  ): Promise<ShellSession> {
-    const response = await fetch(`${this.baseUrl}/shell/sessions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type, target, ...options }),
-    });
+  const data = await response.json();
+  return data.data;
+}
 
-    if (!response.ok) {
-      throw new Error(`Failed to create session: ${response.statusText}`);
-    }
+export async function createDockerSession(
+  containerId: string,
+  options?: {
+    user?: string;
+    working_dir?: string;
+  },
+): Promise<ShellSession> {
+  const response = await fetch(`${BASE_URL}/shell/docker/${containerId}/shell`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(options || {}),
+  });
 
-    const data = await response.json();
-    return data.data;
+  if (!response.ok) {
+    throw new Error(`Failed to create session: ${response.statusText}`);
   }
 
-  async createDockerSession(
-    containerId: string,
-    options?: {
-      user?: string;
-      working_dir?: string;
-    },
-  ): Promise<ShellSession> {
-    const response = await fetch(`${this.baseUrl}/shell/docker/${containerId}/shell`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(options || {}),
-    });
+  const data = await response.json();
+  return data.data;
+}
 
-    if (!response.ok) {
-      throw new Error(`Failed to create session: ${response.statusText}`);
-    }
+export async function createLXCSession(
+  containerName: string,
+  options?: {
+    user?: string;
+    working_dir?: string;
+  },
+): Promise<ShellSession> {
+  const response = await fetch(`${BASE_URL}/shell/lxc/${containerName}/shell`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(options || {}),
+  });
 
-    const data = await response.json();
-    return data.data;
+  if (!response.ok) {
+    throw new Error(`Failed to create LXC session: ${response.statusText}`);
   }
 
-  async createLXCSession(
-    containerName: string,
-    options?: {
-      user?: string;
-      working_dir?: string;
-    },
-  ): Promise<ShellSession> {
-    const response = await fetch(`${this.baseUrl}/shell/lxc/${containerName}/shell`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(options || {}),
-    });
+  const data = await response.json();
+  return data.data;
+}
 
-    if (!response.ok) {
-      throw new Error(`Failed to create LXC session: ${response.statusText}`);
-    }
+export async function listSessions(): Promise<ShellSession[]> {
+  const response = await fetch(`${BASE_URL}/shell/sessions`);
 
-    const data = await response.json();
-    return data.data;
+  if (!response.ok) {
+    throw new Error(`Failed to list sessions: ${response.statusText}`);
   }
 
-  async listSessions(): Promise<ShellSession[]> {
-    const response = await fetch(`${this.baseUrl}/shell/sessions`);
+  const data = await response.json();
+  return data.data;
+}
 
-    if (!response.ok) {
-      throw new Error(`Failed to list sessions: ${response.statusText}`);
-    }
+export async function getSession(sessionId: string): Promise<ShellSession> {
+  const response = await fetch(`${BASE_URL}/shell/sessions/${sessionId}`);
 
-    const data = await response.json();
-    return data.data;
+  if (!response.ok) {
+    throw new Error(`Failed to get session: ${response.statusText}`);
   }
 
-  async getSession(sessionId: string): Promise<ShellSession> {
-    const response = await fetch(`${this.baseUrl}/shell/sessions/${sessionId}`);
+  const data = await response.json();
+  return data.data;
+}
 
-    if (!response.ok) {
-      throw new Error(`Failed to get session: ${response.statusText}`);
-    }
+export async function closeSession(sessionId: string): Promise<void> {
+  const response = await fetch(`${BASE_URL}/shell/sessions/${sessionId}`, {
+    method: "DELETE",
+  });
 
-    const data = await response.json();
-    return data.data;
+  if (!response.ok) {
+    throw new Error(`Failed to close session: ${response.statusText}`);
+  }
+}
+
+export async function checkPackage(packageName: string, packageManager: string = "auto"): Promise<boolean> {
+  const response = await fetch(`${BASE_URL}/shell/packages/check`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ package_name: packageName, package_manager: packageManager }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to check package: ${response.statusText}`);
   }
 
-  async closeSession(sessionId: string): Promise<void> {
-    const response = await fetch(`${this.baseUrl}/shell/sessions/${sessionId}`, {
-      method: "DELETE",
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to close session: ${response.statusText}`);
-    }
-  }
-
-  async checkPackage(packageName: string, packageManager: string = "auto"): Promise<boolean> {
-    const response = await fetch(`${this.baseUrl}/shell/packages/check`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ package_name: packageName, package_manager: packageManager }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to check package: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.data.installed;
-  }
-
-  connectToSession(sessionId: string): WebSocket {
-    return new WebSocket(`${this.wsUrl}/shell/ws/${sessionId}`);
-  }
-
-  connectToPackageInstall(packageName: string, packageManager: string = "auto"): WebSocket {
-    return new WebSocket(`${this.wsUrl}/shell/ws/packages/install?package_name=${packageName}&package_manager=${packageManager}`);
-  }
+  const data = await response.json();
+  return data.data.installed;
 }

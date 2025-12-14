@@ -5,7 +5,7 @@ import type { Terminal as XTerm } from "xterm";
 import type { FitAddon } from "@xterm/addon-fit";
 import { Card, Badge, Group, ActionIcon, Text, Box } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
-import { ShellService } from "@/actions/shellService";
+import { connectToSession } from "@/lib/shellClient";
 import "xterm/css/xterm.css";
 
 interface TerminalProps {
@@ -21,7 +21,6 @@ export const Terminal: React.FC<TerminalProps> = ({ sessionId, socketFactory, on
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
-  const shellService = useMemo(() => new ShellService(), []);
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -83,7 +82,7 @@ export const Terminal: React.FC<TerminalProps> = ({ sessionId, socketFactory, on
       fitAddonRef.current = fitAddon;
 
       // Connect to WebSocket
-      ws = socketFactory ? socketFactory() : shellService.connectToSession(sessionId!);
+      ws = socketFactory ? socketFactory() : connectToSession(sessionId!);
 
       const commandBuffer = { current: "" };
       const prompt = title?.toLowerCase().includes("install") ? "" : "# ";
@@ -221,7 +220,7 @@ export const Terminal: React.FC<TerminalProps> = ({ sessionId, socketFactory, on
         xtermRef.current.dispose();
       }
     };
-  }, [sessionId, socketFactory, shellService, title]);
+  }, [sessionId, socketFactory, title]);
 
   return (
     <Card shadow="sm" padding="0" radius="md" withBorder>

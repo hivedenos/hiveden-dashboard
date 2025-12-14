@@ -11,6 +11,7 @@ import { StrategyWizard } from './StrategyWizard';
 import { PrerequisitesBanner } from './PrerequisitesBanner';
 import { Terminal } from '@/components/Terminal/Terminal';
 import { DiskDetails } from './DiskDetails';
+import { getWebSocketUrl } from '@/lib/shellClient';
 
 interface StoragePageContentProps {
   initialDisks: Disk[];
@@ -200,13 +201,9 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
   };
 
   const socketFactory = useCallback(() => {
-    if (!jobId) return new WebSocket('ws://localhost:8000'); // Fallback
+    const wsUrl = getWebSocketUrl();
+    if (!jobId) return new WebSocket(wsUrl); // Fallback
     
-    // Construct WebSocket URL using ShellService logic (or manually)
-    // Assuming ShellService base URL logic is consistent
-    // We need to access private wsUrl or reconstruct it. 
-    // Let's use the public baseUrl and replace protocol.
-    const wsUrl = 'ws://localhost:8000'; // Hardcoded for now as in ShellService default
     const ws = new WebSocket(`${wsUrl}/shell/ws/jobs/${jobId}`);
     
     ws.addEventListener('message', (event) => {

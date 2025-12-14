@@ -5,7 +5,7 @@ import { PackageStatus, PackageOperation } from "@/lib/client";
 import { Card, Text, Badge, Group, Button, Stack, Modal, ThemeIcon, SimpleGrid, ActionIcon, Tooltip } from "@mantine/core";
 import { IconCheck, IconAlertTriangle, IconDownload, IconTrash, IconTerminal, IconRefresh } from "@tabler/icons-react";
 import { Terminal } from "@/components/Terminal/Terminal";
-import { ShellService } from "@/actions/shellService";
+import { connectToPackageInstall } from "@/lib/shellClient";
 import { useRouter } from "next/navigation";
 
 interface PackageListProps {
@@ -28,8 +28,6 @@ export function PackageList({ initialPackages }: PackageListProps) {
     router.refresh(); // Refresh data to see updated status
   };
 
-  const shellService = new ShellService();
-
   return (
     <>
       <SimpleGrid cols={{ base: 1, md: 2 }} spacing="md">
@@ -48,7 +46,7 @@ export function PackageList({ initialPackages }: PackageListProps) {
         {installingPackage && (
           <div style={{ height: 500 }}>
             <Terminal
-              socketFactory={() => shellService.connectToPackageInstall(installingPackage.name)}
+              socketFactory={() => connectToPackageInstall(installingPackage.name)}
               onClose={handleCloseModal}
               title={`Installing ${installingPackage.name}...`}
             />
