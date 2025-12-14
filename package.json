@@ -10,6 +10,7 @@
     "generate-client": "openapi --input http://localhost:8000/openapi.json --output ./src/lib/client --client fetch"
   },
   "dependencies": {
+    "@mantine/code-highlight": "^8.3.9",
     "@mantine/core": "^8.3.9",
     "@mantine/hooks": "^8.3.9",
     "@mantine/notifications": "^8.3.9",
@@ -21,6 +22,7 @@
     "postcss": "^8.5.6",
     "postcss-preset-mantine": "^1.18.0",
     "postcss-simple-vars": "^7.0.1",
+    "prism-react-renderer": "^2.4.1",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "xterm": "^5.3.0"

@@ -1,12 +1,33 @@
 "use client";
 import { parseCommand } from "@/lib/commandParser";
-import { SegmentedControl, Card, Text, Badge, Stack, Code, SimpleGrid, Box, Tooltip, Loader, Center } from "@mantine/core";
-import { IconTerminal } from "@tabler/icons-react";
+import {
+  SegmentedControl,
+  Card,
+  Text,
+  Badge,
+  Stack,
+  Code,
+  SimpleGrid,
+  Box,
+  Tooltip,
+  Loader,
+  Center,
+  Button,
+  CopyButton,
+  ActionIcon,
+  Textarea,
+  Group,
+  ScrollArea,
+} from "@mantine/core";
+import { Highlight, themes } from "prism-react-renderer";
+import { IconTerminal, IconCopy, IconCheck } from "@tabler/icons-react";
 import { useState, useEffect, useMemo } from "react";
 import type { Container as DockerContainerInfo, EnvVar, Mount } from "@/lib/client";
 import { ContainerLogs } from "./ContainerLogs";
 import { Terminal } from "@/components/Terminal/Terminal";
 import { ShellService } from "@/services/shellService";
+import { getContainerConfiguration } from "@/actions/docker";
+import yaml from "js-yaml";
 
 interface ExtendedContainer extends DockerContainerInfo {
   Env?: EnvVar[];
@@ -26,6 +47,10 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
   const [isLoadingShell, setIsLoadingShell] = useState(false);
   const [shellError, setShellError] = useState<string | null>(null);
   const shellService = useMemo(() => new ShellService(), []);
+
+  // Compose YAML State
+  const [composeYaml, setComposeYaml] = useState<string>("");
+  const [isLoadingYaml, setIsLoadingYaml] = useState(false);
 
   useEffect(() => {
     const createShellSession = async () => {
@@ -57,6 +82,70 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
     };
   }, [activeTab, container.Id, container.State, sessionId, shellService]);
 
+  // Fetch Compose YAML when tab is selected
+  useEffect(() => {
+    const fetchComposeConfig = async () => {
+      if (activeTab === "compose" && !composeYaml) {
+        setIsLoadingYaml(true);
+        try {
+          const response = await getContainerConfiguration(container.Id);
+          if (response.data) {
+            const config = response.data;
+
+            // Map to Docker Compose format
+            const service: any = {
+              container_name: config.name,
+              image: config.image,
+            };
+
+            if (config.command && config.command.length > 0) {
+              service.command = config.command;
+            }
+
+            if (config.env && config.env.length > 0) {
+              const envObj: Record<string, string> = {};
+              config.env.forEach((e) => {
+                if (e.name) envObj[e.name] = e.value || "";
+              });
+              service.environment = envObj;
+            }
+
+            if (config.ports && config.ports.length > 0) {
+              service.ports = config.ports.map((p) => {
+                const protocol = p.protocol === "udp" ? "/udp" : "";
+                return `${p.host_port}:${p.container_port}${protocol}`;
+              });
+            }
+
+            if (config.mounts && config.mounts.length > 0) {
+              service.volumes = config.mounts.map((m) => `${m.source}:${m.target}`);
+            }
+
+            if (config.labels && Object.keys(config.labels).length > 0) {
+              service.labels = config.labels;
+            }
+
+            const composeObj = {
+              version: "3.8",
+              services: {
+                [config.name || "app"]: service,
+              },
+            };
+
+            setComposeYaml(yaml.dump(composeObj));
+          }
+        } catch (error) {
+          console.error("Failed to fetch container configuration:", error);
+          setComposeYaml("# Failed to generate Docker Compose YAML");
+        } finally {
+          setIsLoadingYaml(false);
+        }
+      }
+    };
+
+    fetchComposeConfig();
+  }, [activeTab, container.Id, composeYaml]);
+
   const handleCloseShell = async () => {
     if (sessionId) {
       try {
@@ -82,6 +171,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
             { label: "Logs", value: "logs" },
             { label: "Raw Data", value: "raw" },
             { label: "Shell", value: "shell" },
+            { label: "Compose YAML", value: "compose" },
           ]}
           mb="md"
         />
@@ -267,6 +357,44 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
             <Terminal sessionId={sessionId} onClose={handleCloseShell} title={`Shell - ${container.Name || container.Id.substring(0, 12)}`} />
           ) : null}
         </>
+      )}
+
+      {activeTab === "compose" && (
+        <Card shadow="sm" padding="lg" radius="md" withBorder h="600px" style={{ display: "flex", flexDirection: "column" }}>
+          <Group justify="space-between" mb="md">
+            <Text fw={500} size="lg">
+              Docker Compose YAML
+            </Text>
+            <CopyButton value={composeYaml} timeout={2000}>
+              {({ copied, copy }) => (
+                <Button color={copied ? "teal" : "blue"} onClick={copy} leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}>
+                  {copied ? "Copied" : "Copy YAML"}
+                </Button>
+              )}
+            </CopyButton>
+          </Group>
+          {isLoadingYaml ? (
+            <Center style={{ flex: 1 }}>
+              <Loader size="md" />
+            </Center>
+          ) : (
+            <ScrollArea style={{ flex: 1 }} type="auto" offsetScrollbars>
+              <Highlight theme={themes.vsDark} code={composeYaml} language="yaml">
+                {({ style, tokens, getLineProps, getTokenProps }) => (
+                  <pre style={{ ...style, margin: 0, padding: "var(--mantine-spacing-md)", fontFamily: "monospace", fontSize: "medium" }}>
+                    {tokens.map((line, i) => (
+                      <div key={i} {...getLineProps({ line })}>
+                        {line.map((token, key) => (
+                          <span key={key} {...getTokenProps({ token })} />
+                        ))}
+                      </div>
+                    ))}
+                  </pre>
+                )}
+              </Highlight>
+            </ScrollArea>
+          )}
+        </Card>
       )}
     </>
   );
