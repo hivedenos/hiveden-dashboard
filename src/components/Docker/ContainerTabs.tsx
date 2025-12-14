@@ -25,7 +25,7 @@ import { useState, useEffect, useMemo } from "react";
 import type { Container as DockerContainerInfo, EnvVar, Mount } from "@/lib/client";
 import { ContainerLogs } from "./ContainerLogs";
 import { Terminal } from "@/components/Terminal/Terminal";
-import { ShellService } from "@/services/shellService";
+import { ShellService } from "@/actions/shellService";
 import { getContainerConfiguration } from "@/actions/docker";
 import yaml from "js-yaml";
 

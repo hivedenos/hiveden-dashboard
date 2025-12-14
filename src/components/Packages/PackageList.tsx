@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { PackageStatus, PackageOperation } from '@/lib/client';
-import { Card, Text, Badge, Group, Button, Stack, Modal, ThemeIcon, SimpleGrid, ActionIcon, Tooltip } from '@mantine/core';
-import { IconCheck, IconAlertTriangle, IconDownload, IconTrash, IconTerminal, IconRefresh } from '@tabler/icons-react';
-import { Terminal } from '@/components/Terminal/Terminal';
-import { ShellService } from '@/services/shellService';
-import { useRouter } from 'next/navigation';
+import { useState } from "react";
+import { PackageStatus, PackageOperation } from "@/lib/client";
+import { Card, Text, Badge, Group, Button, Stack, Modal, ThemeIcon, SimpleGrid, ActionIcon, Tooltip } from "@mantine/core";
+import { IconCheck, IconAlertTriangle, IconDownload, IconTrash, IconTerminal, IconRefresh } from "@tabler/icons-react";
+import { Terminal } from "@/components/Terminal/Terminal";
+import { ShellService } from "@/actions/shellService";
+import { useRouter } from "next/navigation";
 
 interface PackageListProps {
   initialPackages: PackageStatus[];
@@ -69,17 +69,23 @@ function PackageCard({ pkg, onFix }: { pkg: PackageStatus; onFix: () => void }) 
       <Group justify="space-between" align="flex-start" mb="xs">
         <div>
           <Group gap="xs" mb={4}>
-            <Text fw={500} size="lg">{pkg.title || pkg.name}</Text>
+            <Text fw={500} size="lg">
+              {pkg.title || pkg.name}
+            </Text>
             {isOk && (
               <ThemeIcon color="green" size="sm" radius="xl" variant="light">
                 <IconCheck size={12} />
               </ThemeIcon>
             )}
             {isMissing && (
-              <Badge color="red" leftSection={<IconAlertTriangle size={12} />}>Missing</Badge>
+              <Badge color="red" leftSection={<IconAlertTriangle size={12} />}>
+                Missing
+              </Badge>
             )}
             {isForbidden && (
-              <Badge color="orange" leftSection={<IconAlertTriangle size={12} />}>Forbidden</Badge>
+              <Badge color="orange" leftSection={<IconAlertTriangle size={12} />}>
+                Forbidden
+              </Badge>
             )}
           </Group>
           <Text size="sm" c="dimmed" lineClamp={2}>
@@ -87,9 +93,9 @@ function PackageCard({ pkg, onFix }: { pkg: PackageStatus; onFix: () => void }) 
           </Text>
         </div>
         {!isOk && (
-          <Button 
-            size="xs" 
-            color={isMissing ? "blue" : "red"} 
+          <Button
+            size="xs"
+            color={isMissing ? "blue" : "red"}
             leftSection={isMissing ? <IconDownload size={14} /> : <IconTrash size={14} />}
             onClick={onFix}
           >
@@ -99,7 +105,7 @@ function PackageCard({ pkg, onFix }: { pkg: PackageStatus; onFix: () => void }) 
       </Group>
 
       <Group mt="md" gap="xs">
-        {(pkg.tags || []).map(tag => (
+        {(pkg.tags || []).map((tag) => (
           <Badge key={tag} size="sm" variant="dot" color="gray">
             {tag}
           </Badge>
