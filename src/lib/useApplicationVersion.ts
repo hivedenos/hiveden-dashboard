@@ -27,7 +27,7 @@ export function useApplicationVersion(): VersionInfo {
       try {
         const response = await getVersion();
         console.log("Version: ", response);
-        const data = response.data as ClientVersionInfo; // Typed cast
+        const data = response as ClientVersionInfo; // Typed cast
         if (data?.version) {
           const version = data.version;
           setRawVersion(version);
@@ -46,7 +46,7 @@ export function useApplicationVersion(): VersionInfo {
         } else {
           setBackendVersion("Unknown Version");
         }
-      } catch (err) {
+      } catch (err: any) {
         console.error("Failed to fetch application version:", err);
         setError("Failed to load version");
         setBackendVersion("Unknown Version");

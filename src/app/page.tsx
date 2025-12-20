@@ -1,6 +1,6 @@
 import { getHwInfo, getOsInfo } from '@/actions/info';
 import { Card, Container, SimpleGrid, Text, Title, Group, ThemeIcon } from '@mantine/core';
-import { IconCpu, IconDeviceDesktop } from '@tabler/icons-react';
+import { IconCpu, IconDeviceDesktop, IconServer } from '@tabler/icons-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,7 +21,7 @@ export default async function Home() {
           </Group>
           
           <Text size="sm" c="dimmed">
-            <pre>{JSON.stringify(osInfo.data, null, 2)}</pre>
+            <pre>{JSON.stringify(osInfo, null, 2)}</pre>
           </Text>
         </Card>
 
@@ -34,7 +34,20 @@ export default async function Home() {
           </Group>
           
           <Text size="sm" c="dimmed">
-            {JSON.stringify(hwInfo.data, null, 2)}
+            {JSON.stringify(hwInfo, null, 2)}
+          </Text>
+        </Card>
+
+        <Card shadow="sm" padding="lg" radius="md" withBorder>
+          <Group mb="xs">
+            <ThemeIcon size="lg" variant="light" color="red">
+              <IconServer size={20} />
+            </ThemeIcon>
+            <Text fw={500} size="lg">Network Information</Text>
+          </Group>
+          
+          <Text size="sm" c="dimmed">
+            {hwInfo.network ? JSON.stringify(hwInfo.network, null, 2) : 'N/A'}
           </Text>
         </Card>
       </SimpleGrid>

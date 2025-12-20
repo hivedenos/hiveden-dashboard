@@ -2,6 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { CancelablePromise } from "../core/CancelablePromise";
+import { OpenAPI } from "../core/OpenAPI";
+import { request as __request } from "../core/request";
 import type { BookmarkCreateRequest } from "../models/BookmarkCreateRequest";
 import type { BookmarkUpdateRequest } from "../models/BookmarkUpdateRequest";
 import type { ClipboardCopyRequest } from "../models/ClipboardCopyRequest";
@@ -18,9 +21,6 @@ import type { RenameRequest } from "../models/RenameRequest";
 import type { SearchRequest } from "../models/SearchRequest";
 import { SortBy } from "../models/SortBy";
 import { SortOrder } from "../models/SortOrder";
-import type { CancelablePromise } from "../core/CancelablePromise";
-import { OpenAPI } from "../core/OpenAPI";
-import { request as __request } from "../core/request";
 export class ExplorerService {
   /**
    * List Directory
@@ -31,12 +31,7 @@ export class ExplorerService {
    * @returns DirectoryListingResponse Successful Response
    * @throws ApiError
    */
-  public static listDirectoryExplorerListGet(
-    path: string,
-    showHidden: boolean = false,
-    sortBy: SortBy = SortBy.NAME,
-    sortOrder: SortOrder = SortOrder.ASC,
-  ): CancelablePromise<DirectoryListingResponse> {
+  public static listDirectoryExplorerListGet(path: string, showHidden: boolean = false, sortBy: SortBy = SortBy.NAME, sortOrder: SortOrder = SortOrder.ASC): CancelablePromise<DirectoryListingResponse> {
     return __request(OpenAPI, {
       method: "GET",
       url: "/explorer/list",
@@ -393,12 +388,7 @@ export class ExplorerService {
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static listOperationsExplorerOperationsGet(
-    status?: string | null,
-    operationType?: string | null,
-    limit: number = 50,
-    offset?: number,
-  ): CancelablePromise<any> {
+  public static listOperationsExplorerOperationsGet(status?: string | null, operationType?: string | null, limit: number = 50, offset?: number): CancelablePromise<any> {
     return __request(OpenAPI, {
       method: "GET",
       url: "/explorer/operations",

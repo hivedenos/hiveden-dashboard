@@ -176,17 +176,18 @@ export function FileList() {
 }
 
 // Helpers
+const IconWrapper = ({ children, isSymlink }: { children: React.ReactNode, isSymlink?: boolean }) => (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+        {children}
+        {isSymlink && (
+            <div style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: 'var(--mantine-color-body)', borderRadius: '50%' }}>
+                 <IconArrowUp size={10} style={{ transform: 'rotate(45deg)', display: 'block' }} color="var(--mantine-color-text)" />
+            </div>
+        )}
+    </div>
+);
+
 function FileIcon({ type, name, isSymlink }: { type: 'file' | 'directory', name: string, isSymlink?: boolean }) {
-    const IconWrapper = ({ children }: { children: React.ReactNode }) => (
-        <div style={{ position: 'relative', display: 'inline-block' }}>
-            {children}
-            {isSymlink && (
-                <div style={{ position: 'absolute', bottom: -2, right: -2, backgroundColor: 'var(--mantine-color-body)', borderRadius: '50%' }}>
-                     <IconArrowUp size={10} style={{ transform: 'rotate(45deg)', display: 'block' }} color="var(--mantine-color-text)" />
-                </div>
-            )}
-        </div>
-    );
 
     if (type === 'directory') {
         return (

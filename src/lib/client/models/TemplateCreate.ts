@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { EnvVar } from './EnvVar';
+import type { IngressConfig } from './IngressConfig';
 import type { Mount } from './Mount';
 import type { Port } from './Port';
 export type TemplateCreate = {
@@ -13,6 +14,7 @@ export type TemplateCreate = {
     ports?: (Array<Port> | null);
     mounts?: (Array<Mount> | null);
     labels?: (Record<string, string> | null);
+    ingress_config?: (IngressConfig | null);
     is_container?: boolean;
     enabled?: boolean;
     type?: string;

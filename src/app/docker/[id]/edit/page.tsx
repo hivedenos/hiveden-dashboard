@@ -4,6 +4,7 @@ import { Container, Title, Text, Stack, Group, Button, LoadingOverlay, Box, Aler
 import { ContainerForm } from '@/components/Docker/ContainerForm';
 import { useContainerForm } from '@/hooks/useContainerForm';
 import { handleUpdateContainer } from '@/lib/container-update';
+import { AppRouterInstance } from 'next/dist/shared/lib/app-router-context.shared-runtime';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { getContainerConfiguration } from '@/actions/docker';
@@ -92,7 +93,7 @@ function EditContainerFormWrapper({
 }: { 
     initialValues: Partial<ContainerFormState>, 
     containerId: string, 
-    router: any, 
+    router: AppRouterInstance, 
     setLoading: (l: boolean) => void 
 }) {
     const form = useContainerForm(initialValues);

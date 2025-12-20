@@ -22,7 +22,7 @@ import {
 import { Highlight, themes } from "prism-react-renderer";
 import { IconTerminal, IconCopy, IconCheck } from "@tabler/icons-react";
 import { useState, useEffect, useMemo } from "react";
-import type { Container as DockerContainerInfo, EnvVar, Mount } from "@/lib/client";
+import type { Container as DockerContainerInfo, EnvVar, Mount, Port } from "@/lib/client";
 import { ContainerLogs } from "./ContainerLogs";
 import { Terminal } from "@/components/Terminal/Terminal";
 import { createDockerSession, closeSession } from "@/actions/shellService";
@@ -39,6 +39,16 @@ interface PortBinding {
   host_port?: number;
   container_port?: string | number;
   protocol?: string;
+}
+
+interface DockerComposeService {
+  container_name?: string;
+  image?: string;
+  command?: string[];
+  environment?: Record<string, string>;
+  ports?: string[];
+  volumes?: string[];
+  labels?: Record<string, string>;
 }
 
 export function ContainerTabs({ container }: { container: ExtendedContainer }) {
@@ -62,7 +72,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
             working_dir: "/",
           });
           setSessionId(session.session_id);
-        } catch (error) {
+        } catch (error: any) {
           console.error("Failed to create shell session:", error);
           setShellError(error instanceof Error ? error.message : "Failed to create shell session");
         } finally {
@@ -92,7 +102,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
             const config = response.data;
 
             // Map to Docker Compose format
-            const service: any = {
+            const service: DockerComposeService = {
               container_name: config.name,
               image: config.image,
             };
@@ -133,7 +143,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
 
             setComposeYaml(yaml.dump(composeObj));
           }
-        } catch (error) {
+        } catch (error: any) {
           console.error("Failed to fetch container configuration:", error);
           setComposeYaml("# Failed to generate Docker Compose YAML");
         } finally {
@@ -253,7 +263,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
                 {Object.entries(container.Ports)
                   .flatMap(([key, value]) => {
                     if (!value) return [];
-                    return (value as any[]).map((binding) => ({
+                    return (value as Port[]).map((binding) => ({
                       ...binding,
                       container_port: key,
                       protocol: key.split("/")[1] || "tcp",

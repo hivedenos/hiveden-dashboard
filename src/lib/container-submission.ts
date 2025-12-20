@@ -16,8 +16,18 @@ export async function handleCreateContainer(
       if (l.key) labelsRecord[l.key] = l.value;
     });
 
+    // Destructure to remove form-specific fields
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { ingressSubdomainChecked, ...restFormData } = formData;
+
+    // Ensure ingress_config is only sent if fully valid and enabled
+    const finalIngressConfig = ingressSubdomainChecked && formData.ingress_config && formData.ingress_config.port > 0
+      ? formData.ingress_config 
+      : null;
+
     const commonData = { 
-      ...formData, 
+      ...restFormData, 
+      ingress_config: finalIngressConfig,
       labels: labelsRecord,
       command: formData.command.length > 0 ? formData.command : null 
     };
@@ -51,8 +61,12 @@ export async function handleCreateTemplate(
       if (l.key) labelsRecord[l.key] = l.value;
     });
 
+    // Destructure to remove form-specific fields
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { ingressSubdomainChecked, ...restFormData } = formData;
+
     const commonData = { 
-      ...formData, 
+      ...restFormData, 
       labels: labelsRecord,
       command: formData.command.length > 0 ? formData.command : null 
     };

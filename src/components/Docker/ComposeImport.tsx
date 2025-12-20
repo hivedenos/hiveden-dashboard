@@ -1,11 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { Box, Button, Group, Paper, Textarea, Title, Alert, Stack } from "@mantine/core";
+import { ContainerFormState } from "@/hooks/useContainerForm";
+import { EnvVar, Mount, Port } from "@/lib/client";
+import { Alert, Box, Button, Group, Paper, Stack, Textarea, Title } from "@mantine/core";
 import { IconAlertCircle } from "@tabler/icons-react";
 import yaml from "js-yaml";
-import { ContainerFormState } from "@/hooks/useContainerForm";
-import { EnvVar, Port, Mount } from "@/lib/client";
+import { useState } from "react";
+
+interface DockerComposeConfig {
+  services: {
+    [serviceName: string]: {
+      container_name?: string;
+      image?: string;
+      command?: string | string[];
+      environment?: { [key: string]: string | number } | string[];
+      ports?: (string | number | object)[];
+      volumes?: (string | object)[];
+      labels?: { [key: string]: string } | string[];
+    };
+  };
+}
 
 interface ComposeYamlInputProps {
   onParsed: (data: Partial<ContainerFormState>[]) => void;
@@ -156,17 +170,7 @@ export function ComposeYamlInput({ onParsed, onCancel }: ComposeYamlInputProps) 
 
       <Paper p="md" withBorder radius="md">
         <Stack justify="space-between">
-          <Textarea
-            label="Docker Compose YAML"
-            description="Paste your docker-compose.yml content here."
-            placeholder={`services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"\n  db:\n    image: postgres:15`}
-            minRows={20}
-            maxRows={20}
-            value={yamlContent}
-            autosize
-            onChange={(event) => setYamlContent(event.currentTarget.value)}
-            style={{ fontFamily: "monospace" }}
-          />
+          <Textarea label="Docker Compose YAML" description="Paste your docker-compose.yml content here." placeholder={`services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"\n  db:\n    image: postgres:15`} minRows={20} maxRows={20} value={yamlContent} autosize onChange={(event) => setYamlContent(event.currentTarget.value)} style={{ fontFamily: "monospace" }} />
 
           <Group justify="flex-end">
             <Button variant="default" onClick={onCancel}>

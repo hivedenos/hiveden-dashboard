@@ -3,6 +3,7 @@ import { ContainerCreate, EnvVar, Port, Mount } from '@/lib/client';
 
 export type ContainerFormState = Omit<ContainerCreate, 'command'> & {
   command: string[];
+  ingressSubdomainChecked: boolean;
 };
 
 export interface UseContainerFormReturn {
@@ -44,6 +45,7 @@ export function useContainerForm(initialValues?: Partial<ContainerFormState>): U
     mounts: [],
     labels: {},
     enabled: true,
+    ingressSubdomainChecked: !!initialValues?.ingress_config,
     ...initialValues,
   });
 
