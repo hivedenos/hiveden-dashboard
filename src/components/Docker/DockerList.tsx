@@ -1,12 +1,10 @@
 "use client";
 
-import { stopContainer, startContainer, removeContainer } from "@/actions/docker";
-import { Table, Group, Badge, ActionIcon, Pagination, Stack, Select, Text, Checkbox, Tooltip } from "@mantine/core";
-import { IconTrash, IconPlayerStop, IconPlayerPlay, IconEye, IconCheck, IconX, IconEdit } from "@tabler/icons-react";
+import { Table, Group, Badge, Pagination, Stack, Select, Text, Checkbox } from "@mantine/core";
+import { IconCheck, IconX } from "@tabler/icons-react";
 import { useState } from "react";
 import type { Container } from "@/lib/client";
-import Link from "next/link";
-import { notifications } from "@mantine/notifications";
+import { ContainerActions } from "./ContainerActions";
 
 interface DockerListProps {
   containers: Container[];
@@ -15,70 +13,8 @@ interface DockerListProps {
 }
 
 export function DockerList({ containers, selectedRows, setSelectedRows }: DockerListProps) {
-  const [loading, setLoading] = useState<string | null>(null);
   const [activePage, setActivePage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<string>("10");
-
-  const handleStart = async (id: string) => {
-    setLoading(id);
-    try {
-      await startContainer(id);
-      notifications.show({
-        title: "Container started",
-        message: "The container has been started successfully",
-        color: "green",
-      });
-    } catch (error) {
-      notifications.show({
-        title: "Error",
-        message: error instanceof Error ? error.message : "Failed to start container",
-        color: "red",
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  const handleStop = async (id: string) => {
-    setLoading(id);
-    try {
-      await stopContainer(id);
-      notifications.show({
-        title: "Container stopped",
-        message: "The container has been stopped successfully",
-        color: "green",
-      });
-    } catch (error) {
-      notifications.show({
-        title: "Error",
-        message: error instanceof Error ? error.message : "Failed to stop container",
-        color: "red",
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
-
-  const handleRemove = async (id: string) => {
-    if (!confirm("Are you sure?")) return;
-    setLoading(id);
-    try {
-      await removeContainer(id);
-      notifications.show({
-        title: "Container deleted",
-        message: "The container has been deleted successfully",
-        color: "green",
-      });
-    } catch (error) {
-      notifications.show({
-        title: "Error",
-        message: error instanceof Error ? error.message : "Failed to delete container",
-        color: "red",
-      });
-    } finally {
-      setLoading(null);
-    }
-  };
 
   // Check if container is managed by Hiveden (has hiveden label)
   const isManagedByHiveden = (container: Container): boolean => {
@@ -144,34 +80,7 @@ export function DockerList({ containers, selectedRows, setSelectedRows }: Docker
         )}
       </Table.Td>
       <Table.Td>
-        <Group gap="xs">
-          <ActionIcon component={Link} href={`/docker/${container.Id}`} variant="light" color="blue">
-            <IconEye size={16} />
-          </ActionIcon>
-          <ActionIcon component={Link} href={`/docker/${container.Id}/edit`} variant="light" color="cyan">
-            <IconEdit size={16} />
-          </ActionIcon>
-          {container.State === "running" ? (
-            <ActionIcon variant="light" color="orange" onClick={() => handleStop(container.Id)} loading={loading === container.Id}>
-              <IconPlayerStop size={16} />
-            </ActionIcon>
-          ) : (
-            <ActionIcon variant="light" color="green" onClick={() => handleStart(container.Id)} loading={loading === container.Id}>
-              <IconPlayerPlay size={16} />
-            </ActionIcon>
-          )}
-          <Tooltip label="Please stop the container first in order to delete it" disabled={!(container.State === "running")} withArrow>
-            <ActionIcon
-              variant="light"
-              color="red"
-              onClick={() => handleRemove(container.Id)}
-              loading={loading === container.Id}
-              disabled={container.State === "running"}
-            >
-              <IconTrash size={16} />
-            </ActionIcon>
-          </Tooltip>
-        </Group>
+        <ContainerActions containerId={container.Id} containerState={container.State || "unknown"} size="small" />
       </Table.Td>
     </Table.Tr>
   ));
