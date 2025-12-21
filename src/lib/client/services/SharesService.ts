@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { BtrfsShareListResponse } from '../models/BtrfsShareListResponse';
+import type { BtrfsVolumeListResponse } from '../models/BtrfsVolumeListResponse';
 import type { CreateBtrfsShareRequest } from '../models/CreateBtrfsShareRequest';
 import type { DataResponse } from '../models/DataResponse';
 import type { SMBShareCreate } from '../models/SMBShareCreate';
@@ -184,10 +186,10 @@ export class SharesService {
     }
     /**
      * List Btrfs Volumes Endpoint
-     * @returns DataResponse Successful Response
+     * @returns BtrfsVolumeListResponse Successful Response
      * @throws ApiError
      */
-    public static listBtrfsVolumesEndpointSharesBtrfsVolumesGet(): CancelablePromise<DataResponse> {
+    public static listBtrfsVolumesEndpointSharesBtrfsVolumesGet(): CancelablePromise<BtrfsVolumeListResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/shares/btrfs/volumes',
@@ -195,10 +197,10 @@ export class SharesService {
     }
     /**
      * List Btrfs Shares Endpoint
-     * @returns DataResponse Successful Response
+     * @returns BtrfsShareListResponse Successful Response
      * @throws ApiError
      */
-    public static listBtrfsSharesEndpointSharesBtrfsSharesGet(): CancelablePromise<DataResponse> {
+    public static listBtrfsSharesEndpointSharesBtrfsSharesGet(): CancelablePromise<BtrfsShareListResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/shares/btrfs/shares',

@@ -6,5 +6,6 @@ export type BtrfsVolume = {
     device: string;
     mountpoint: string;
     label?: (string | null);
+    parent_path?: (string | null);
 };
 

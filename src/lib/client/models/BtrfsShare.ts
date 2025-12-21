@@ -4,7 +4,7 @@
 /* eslint-disable */
 export type BtrfsShare = {
     name: string;
-    parent_path: string;
+    parent_path?: (string | null);
     mount_path: string;
     device: string;
     subvolid: string;
