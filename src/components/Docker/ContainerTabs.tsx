@@ -13,7 +13,6 @@ import {
   Loader,
   Center,
   Button,
-  CopyButton,
   ActionIcon,
   Textarea,
   Group,
@@ -60,6 +59,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
   // Compose YAML State
   const [composeYaml, setComposeYaml] = useState<string>("");
   const [isLoadingYaml, setIsLoadingYaml] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const createShellSession = async () => {
@@ -164,6 +164,36 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
       } catch (error) {
         console.error("Failed to close shell session:", error);
       }
+    }
+  };
+
+  const handleCopy = () => {
+    const textToCopy = composeYaml;
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      }).catch((err) => {
+        console.error('Failed to copy: ', err);
+      });
+    } else {
+      // Fallback
+      const textArea = document.createElement("textarea");
+      textArea.value = textToCopy;
+      textArea.style.position = "fixed";
+      textArea.style.left = "-9999px";
+      textArea.style.top = "0";
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      try {
+        document.execCommand('copy');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Fallback: Oops, unable to copy', err);
+      }
+      document.body.removeChild(textArea);
     }
   };
 
@@ -374,13 +404,9 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
             <Text fw={500} size="lg">
               Docker Compose YAML
             </Text>
-            <CopyButton value={composeYaml} timeout={2000}>
-              {({ copied, copy }) => (
-                <Button color={copied ? "teal" : "blue"} onClick={copy} leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}>
-                  {copied ? "Copied" : "Copy YAML"}
-                </Button>
-              )}
-            </CopyButton>
+            <Button color={copied ? "teal" : "blue"} onClick={handleCopy} leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}>
+              {copied ? "Copied" : "Copy YAML"}
+            </Button>
           </Group>
           {isLoadingYaml ? (
             <Center style={{ flex: 1 }}>
@@ -392,7 +418,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
                 {({ style, tokens, getLineProps, getTokenProps }) => (
                   <pre style={{ ...style, margin: 0, padding: "var(--mantine-spacing-md)", fontFamily: "monospace", fontSize: "medium" }}>
                     {tokens.map((line, i) => (
-                      <div key={i} {...getLineProps({ line })}>
+                      <div key={i} {...getLineProps({ line }) }>
                         {line.map((token, key) => (
                           <span key={key} {...getTokenProps({ token })} />
                         ))}
