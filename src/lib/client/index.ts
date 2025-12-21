@@ -47,6 +47,7 @@ export type { JobInfo } from './models/JobInfo';
 export type { LXCContainer } from './models/LXCContainer';
 export type { LXCContainerCreate } from './models/LXCContainerCreate';
 export type { Mount } from './models/Mount';
+export type { MountPoint } from './models/MountPoint';
 export type { MountRequest } from './models/MountRequest';
 export type { Network } from './models/Network';
 export type { NetworkAddress } from './models/NetworkAddress';

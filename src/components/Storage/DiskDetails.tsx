@@ -208,21 +208,29 @@ export function DiskDetails({ disk }: DiskDetailsProps) {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {(disk.partitions || []).map((part) => (
-                <Table.Tr key={part.path}>
-                  <Table.Td>{part.name}</Table.Td>
-                  <Table.Td>{part.mountpoint || "-"}</Table.Td>
-                  <Table.Td>{formatBytes(part.size)}</Table.Td>
-                  <Table.Td>{part.fstype || "-"}</Table.Td>
-                  <Table.Td>
-                    {!part.mountpoint && (
-                      <Button size="xs" variant="light" onClick={() => handleMountClick(part)}>
-                        Mount
-                      </Button>
-                    )}
-                  </Table.Td>
-                </Table.Tr>
-              ))}
+              {(disk.partitions || []).map((part) => {
+                const isMounted = (part.mountpoints && part.mountpoints.length > 0) || !!part.mountpoint;
+                const mountPointsDisplay =
+                  part.mountpoints && part.mountpoints.length > 0
+                    ? part.mountpoints.map((mp) => mp.path).join(", ")
+                    : part.mountpoint || "-";
+
+                return (
+                  <Table.Tr key={part.path}>
+                    <Table.Td>{part.name}</Table.Td>
+                    <Table.Td>{mountPointsDisplay}</Table.Td>
+                    <Table.Td>{formatBytes(part.size)}</Table.Td>
+                    <Table.Td>{part.fstype || "-"}</Table.Td>
+                    <Table.Td>
+                      {!isMounted && (
+                        <Button size="xs" variant="light" onClick={() => handleMountClick(part)}>
+                          Mount
+                        </Button>
+                      )}
+                    </Table.Td>
+                  </Table.Tr>
+                );
+              })}
             </Table.Tbody>
           </Table>
         )}
