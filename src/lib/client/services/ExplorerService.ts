@@ -5,8 +5,6 @@
 import type { CancelablePromise } from "../core/CancelablePromise";
 import { OpenAPI } from "../core/OpenAPI";
 import { request as __request } from "../core/request";
-import type { BookmarkCreateRequest } from "../models/BookmarkCreateRequest";
-import type { BookmarkUpdateRequest } from "../models/BookmarkUpdateRequest";
 import type { ClipboardCopyRequest } from "../models/ClipboardCopyRequest";
 import type { ClipboardPasteRequest } from "../models/ClipboardPasteRequest";
 import type { ClipboardStatusResponse } from "../models/ClipboardStatusResponse";
@@ -16,6 +14,8 @@ import type { DeleteRequest } from "../models/DeleteRequest";
 import type { DeleteResponse } from "../models/DeleteResponse";
 import type { DirectoryListingResponse } from "../models/DirectoryListingResponse";
 import type { FilePropertyResponse } from "../models/FilePropertyResponse";
+import type { LocationCreateRequest } from "../models/LocationCreateRequest";
+import type { LocationUpdateRequest } from "../models/LocationUpdateRequest";
 import type { OperationResponse } from "../models/OperationResponse";
 import type { RenameRequest } from "../models/RenameRequest";
 import type { SearchRequest } from "../models/SearchRequest";
@@ -265,7 +265,7 @@ export class ExplorerService {
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static createBookmarkExplorerBookmarksPost(requestBody: BookmarkCreateRequest): CancelablePromise<any> {
+  public static createBookmarkExplorerBookmarksPost(requestBody: LocationCreateRequest): CancelablePromise<any> {
     return __request(OpenAPI, {
       method: "POST",
       url: "/explorer/bookmarks",
@@ -283,7 +283,7 @@ export class ExplorerService {
    * @returns any Successful Response
    * @throws ApiError
    */
-  public static updateBookmarkExplorerBookmarksBookmarkIdPut(bookmarkId: number, requestBody: BookmarkUpdateRequest): CancelablePromise<any> {
+  public static updateBookmarkExplorerBookmarksBookmarkIdPut(bookmarkId: number, requestBody: LocationUpdateRequest): CancelablePromise<any> {
     return __request(OpenAPI, {
       method: "PUT",
       url: "/explorer/bookmarks/{bookmark_id}",

@@ -8,5 +8,6 @@ export type BtrfsShare = {
     mount_path: string;
     device: string;
     subvolid: string;
+    uuid?: (string | null);
 };
 

@@ -24,6 +24,7 @@ export function DockerPageContent({ containers }: { containers: DockerContainer[
             <ContainerActions 
                 containerId={Array.from(selectedRows).join(',')} 
                 containerState={selectedContainerState}
+                size="big"
             />
             </Collapse>
             <Group gap={0}>

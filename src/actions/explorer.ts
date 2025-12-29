@@ -10,8 +10,6 @@ import {
   ClipboardCopyRequest,
   ClipboardPasteRequest,
   SearchRequest,
-  BookmarkCreateRequest,
-  BookmarkUpdateRequest,
   SortBy,
   SortOrder,
   OperationResponse

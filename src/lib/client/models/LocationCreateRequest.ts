@@ -2,8 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type BookmarkUpdateRequest = {
-    name?: (string | null);
-    path?: (string | null);
+export type LocationCreateRequest = {
+    name: string;
+    path: string;
+    type?: string;
+    description?: (string | null);
 };
 

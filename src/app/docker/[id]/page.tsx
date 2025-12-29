@@ -32,7 +32,7 @@ export default async function ContainerDetailPage({ params }: { params: Promise<
 
       <Group justify="space-between" mb="lg">
         <Title order={2}>Container Details</Title>
-        <ContainerActions containerId={container.Id} containerState={container.State} />
+        <ContainerActions containerId={container.Id} containerState={container.State} size="big" />
       </Group>
 
       <ContainerTabs container={container} />

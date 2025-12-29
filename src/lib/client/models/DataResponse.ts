@@ -8,6 +8,8 @@ import type { BtrfsVolume } from './BtrfsVolume';
 import type { Container } from './Container';
 import type { Disk } from './Disk';
 import type { DiskDetail } from './DiskDetail';
+import type { DomainInfoResponse } from './DomainInfoResponse';
+import type { DomainUpdateResponse } from './DomainUpdateResponse';
 import type { HWInfo } from './HWInfo';
 import type { JobInfo } from './JobInfo';
 import type { LXCContainer } from './LXCContainer';
@@ -22,6 +24,6 @@ import type { ZFSPool } from './ZFSPool';
 export type DataResponse = {
     status?: string;
     message?: (string | null);
-    data?: (Container | Network | DiskDetail | Disk | StorageStrategy | PackageStatus | OSInfo | HWInfo | LXCContainer | ZFSPool | ZFSDataset | SMBShare | BtrfsVolume | BtrfsSubvolume | BtrfsShare | VersionInfo | JobInfo | Array<Container> | Array<Network> | Array<Disk> | Array<StorageStrategy> | Array<PackageStatus> | Array<LXCContainer> | Array<ZFSPool> | Array<ZFSDataset> | Array<SMBShare> | Array<BtrfsVolume> | Array<BtrfsSubvolume> | Array<BtrfsShare> | Array<string> | Record<string, any> | null);
+    data?: (Container | Network | DiskDetail | Disk | StorageStrategy | PackageStatus | OSInfo | HWInfo | LXCContainer | ZFSPool | ZFSDataset | SMBShare | BtrfsVolume | BtrfsSubvolume | BtrfsShare | VersionInfo | JobInfo | Array<Container> | Array<Network> | Array<Disk> | Array<StorageStrategy> | Array<PackageStatus> | Array<LXCContainer> | Array<ZFSPool> | Array<ZFSDataset> | Array<SMBShare> | Array<BtrfsVolume> | Array<BtrfsSubvolume> | Array<BtrfsShare> | Array<string> | Record<string, any> | DomainInfoResponse | DomainUpdateResponse | null);
 };
 

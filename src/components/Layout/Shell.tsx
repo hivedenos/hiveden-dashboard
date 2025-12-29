@@ -14,6 +14,7 @@ import {
   IconPackage,
   IconDatabase,
   IconFolder,
+  IconSettings,
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -43,6 +44,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { label: "Network Shares", icon: IconShare, link: "/shares" },
     { label: "Templates", icon: IconTemplate, link: "/templates" },
     { label: "Logs", icon: IconFileText, link: "/logs" },
+    { label: "System Config", icon: IconSettings, link: "/system" },
   ];
 
   const bottomNavItems = [{ label: "Required Packages", icon: IconPackage, link: "/packages" }];

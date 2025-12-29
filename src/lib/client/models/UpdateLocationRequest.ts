@@ -2,8 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type BookmarkCreateRequest = {
-    name: string;
-    path: string;
+export type UpdateLocationRequest = {
+    new_path: string;
 };
 
