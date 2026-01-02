@@ -10,6 +10,7 @@ import type { Disk } from './Disk';
 import type { DiskDetail } from './DiskDetail';
 import type { DomainInfoResponse } from './DomainInfoResponse';
 import type { DomainUpdateResponse } from './DomainUpdateResponse';
+import type { FileUploadResponse } from './FileUploadResponse';
 import type { HWInfo } from './HWInfo';
 import type { JobInfo } from './JobInfo';
 import type { LXCContainer } from './LXCContainer';
@@ -18,12 +19,13 @@ import type { OSInfo } from './OSInfo';
 import type { PackageStatus } from './PackageStatus';
 import type { SMBShare } from './SMBShare';
 import type { StorageStrategy } from './StorageStrategy';
+import type { SystemDevices } from './SystemDevices';
 import type { VersionInfo } from './VersionInfo';
 import type { ZFSDataset } from './ZFSDataset';
 import type { ZFSPool } from './ZFSPool';
 export type DataResponse = {
     status?: string;
     message?: (string | null);
-    data?: (Container | Network | DiskDetail | Disk | StorageStrategy | PackageStatus | OSInfo | HWInfo | LXCContainer | ZFSPool | ZFSDataset | SMBShare | BtrfsVolume | BtrfsSubvolume | BtrfsShare | VersionInfo | JobInfo | Array<Container> | Array<Network> | Array<Disk> | Array<StorageStrategy> | Array<PackageStatus> | Array<LXCContainer> | Array<ZFSPool> | Array<ZFSDataset> | Array<SMBShare> | Array<BtrfsVolume> | Array<BtrfsSubvolume> | Array<BtrfsShare> | Array<string> | Record<string, any> | DomainInfoResponse | DomainUpdateResponse | null);
+    data?: (Container | Network | DiskDetail | Disk | StorageStrategy | PackageStatus | OSInfo | HWInfo | SystemDevices | LXCContainer | ZFSPool | ZFSDataset | SMBShare | BtrfsVolume | BtrfsSubvolume | BtrfsShare | VersionInfo | JobInfo | Array<Container> | Array<Network> | Array<Disk> | Array<StorageStrategy> | Array<PackageStatus> | Array<LXCContainer> | Array<ZFSPool> | Array<ZFSDataset> | Array<SMBShare> | Array<BtrfsVolume> | Array<BtrfsSubvolume> | Array<BtrfsShare> | Array<string> | Record<string, any> | DomainInfoResponse | DomainUpdateResponse | FileUploadResponse | null);
 };
 

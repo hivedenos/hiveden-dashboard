@@ -1,8 +1,7 @@
 import { getHwInfo, getOsInfo, getVersion } from '@/actions/info';
 import { getSystemLocations } from '@/actions/system';
-import { Container, Title, SimpleGrid } from '@mantine/core';
-import { NeoFetch } from '@/components/Dashboard/NeoFetch';
-import { StorageLocations } from '@/components/Dashboard/StorageLocations';
+import { Container, Title } from '@mantine/core';
+import { DashboardLayout } from '@/components/Dashboard/DashboardLayout';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,14 +13,17 @@ export default async function Home() {
     getSystemLocations()
   ]);
 
+  const initialData = {
+    osInfo,
+    hwInfo,
+    version,
+    locations: locationData.data
+  };
+
   return (
     <Container fluid>
       <Title order={2} mb="lg">System Overview</Title>
-      
-      <SimpleGrid cols={{ base: 1, xl: 2 }} spacing="lg">
-        <NeoFetch osInfo={osInfo} hwInfo={hwInfo} version={version} />
-        <StorageLocations locations={locationData.data} />
-      </SimpleGrid>
+      <DashboardLayout initialData={initialData} />
     </Container>
   );
 }

@@ -7,5 +7,6 @@ export type Mount = {
     target: string;
     type?: string;
     is_app_directory?: boolean;
+    read_only?: boolean;
 };
 

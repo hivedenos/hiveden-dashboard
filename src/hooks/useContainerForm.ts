@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ContainerCreate, EnvVar, Port, Mount } from '@/lib/client';
+import { ContainerCreate, EnvVar, Port, Mount, Device } from '@/lib/client';
 
 export type ContainerFormState = Omit<ContainerCreate, 'command'> & {
   command: string[];
@@ -29,6 +29,10 @@ export interface UseContainerFormReturn {
   addMount: () => void;
   removeMount: (index: number) => void;
   updateMount: (index: number, field: keyof Mount, value: unknown) => void;
+  // Device
+  addDevice: () => void;
+  removeDevice: (index: number) => void;
+  updateDevice: (index: number, field: keyof Device, value: unknown) => void;
   // Label
   addLabel: () => void;
   removeLabel: (index: number) => void;
@@ -43,6 +47,7 @@ export function useContainerForm(initialValues?: Partial<ContainerFormState>): U
     env: [],
     ports: [],
     mounts: [],
+    devices: [],
     labels: {},
     enabled: true,
     ingressSubdomainChecked: !!initialValues?.ingress_config,
@@ -165,6 +170,22 @@ export function useContainerForm(initialValues?: Partial<ContainerFormState>): U
     });
   };
 
+  const addDevice = () => {
+    setFormData(prev => ({ ...prev, devices: [...(prev.devices || []), { path_on_host: '', path_in_container: '', cgroup_permissions: 'rwm' }] }));
+  };
+
+  const removeDevice = (index: number) => {
+    setFormData(prev => ({ ...prev, devices: (prev.devices || []).filter((_, i) => i !== index) }));
+  };
+
+  const updateDevice = (index: number, field: keyof Device, value: unknown) => {
+    setFormData(prev => {
+      const newDevices = [...(prev.devices || [])];
+      newDevices[index] = { ...newDevices[index], [field]: value };
+      return { ...prev, devices: newDevices };
+    });
+  };
+
   const addLabel = () => {
     setLabelsList(prev => [...prev, { key: '', value: '' }]);
   };
@@ -200,6 +221,9 @@ export function useContainerForm(initialValues?: Partial<ContainerFormState>): U
     addMount,
     removeMount,
     updateMount,
+    addDevice,
+    removeDevice,
+    updateDevice,
     addLabel,
     removeLabel,
     updateLabel,

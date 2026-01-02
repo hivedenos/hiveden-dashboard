@@ -30,6 +30,17 @@ export class InfoService {
         });
     }
     /**
+     * Get All Devices Endpoint
+     * @returns DataResponse Successful Response
+     * @throws ApiError
+     */
+    public static getAllDevicesEndpointInfoDevicesGet(): CancelablePromise<DataResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/info/devices',
+        });
+    }
+    /**
      * Get Version Endpoint
      * @returns DataResponse Successful Response
      * @throws ApiError

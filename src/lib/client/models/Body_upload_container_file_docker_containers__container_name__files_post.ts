@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type DomainUpdateResponse = {
-    updated_containers: Array<string>;
+export type Body_upload_container_file_docker_containers__container_name__files_post = {
+    file: Blob;
 };
 

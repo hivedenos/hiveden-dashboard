@@ -56,12 +56,13 @@ export function StorageLocations({ locations }: StorageLocationsProps) {
   };
 
   return (
-    <Box
+    <Box 
       style={{
-        padding: "2rem",
-        backgroundColor: "var(--mantine-color-dark-8)",
-        borderRadius: "var(--mantine-radius-md)",
-        height: "100%",
+        padding: '2rem',
+        backgroundColor: 'var(--mantine-color-dark-8)',
+        borderRadius: 'var(--mantine-radius-md)',
+        height: '100%',
+        width: '100%'
       }}
     >
       <Title order={3} mb="md">

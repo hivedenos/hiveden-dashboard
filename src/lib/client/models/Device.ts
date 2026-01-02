@@ -2,7 +2,9 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type DomainUpdateResponse = {
-    updated_containers: Array<string>;
+export type Device = {
+    path_on_host: string;
+    path_in_container: string;
+    cgroup_permissions?: string;
 };
 

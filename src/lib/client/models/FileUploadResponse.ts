@@ -2,10 +2,10 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { DockerContainer } from './DockerContainer';
-export type TemplateResponse = {
+export type FileUploadResponse = {
     status?: string;
     message?: (string | null);
-    data: DockerContainer;
+    relative_path: string;
+    absolute_path: string;
 };
 

@@ -12,7 +12,8 @@ import type {
   TemplateResponse,
   ContainerResponse,
   ContainerConfigResponse,
-  ContainerCreateResponse
+  ContainerCreateResponse,
+  FileUploadResponse
 } from '@/lib/client';
 
 export async function listContainers(): Promise<DataResponse> {
@@ -21,6 +22,20 @@ export async function listContainers(): Promise<DataResponse> {
 
 export async function createContainer(container: ContainerCreate): Promise<DataResponse> {
   return DockerService.createNewContainerDockerContainersPost(container);
+}
+
+export async function uploadContainerFile(containerName: string, path: string, formData: FormData): Promise<FileUploadResponse> {
+  const file = formData.get('file');
+  
+  if (!file || !(file instanceof Blob)) {
+    throw new Error("No valid file provided");
+  }
+
+  return DockerService.uploadContainerFileDockerContainersContainerNameFilesPost(
+    containerName,
+    path,
+    { file: file }
+  );
 }
 
 export async function createTemplate(template: TemplateCreate): Promise<TemplateResponse> {

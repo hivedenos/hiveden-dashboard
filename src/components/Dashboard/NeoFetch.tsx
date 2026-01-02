@@ -41,6 +41,8 @@ export function NeoFetch({ osInfo, hwInfo, version }: NeoFetchProps) {
         padding: '2rem',
         backgroundColor: 'var(--mantine-color-dark-8)',
         borderRadius: 'var(--mantine-radius-md)',
+        height: '100%',
+        width: '100%'
       }}
     >
       <Group align="flex-start" gap="xl">

@@ -18,3 +18,7 @@ export async function getVersion(): Promise<VersionInfo> {
   const response = await InfoService.getVersionEndpointInfoVersionGet();
   return response.data as VersionInfo;
 }
+
+export async function getAllDevices(): Promise<DataResponse> {
+  return InfoService.getAllDevicesEndpointInfoDevicesGet();
+}

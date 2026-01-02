@@ -2,40 +2,21 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { Body_upload_container_file_docker_containers__container_name__files_post } from '../models/Body_upload_container_file_docker_containers__container_name__files_post';
 import type { ContainerConfigResponse } from '../models/ContainerConfigResponse';
 import type { ContainerCreate } from '../models/ContainerCreate';
 import type { ContainerCreateResponse } from '../models/ContainerCreateResponse';
 import type { ContainerListResponse } from '../models/ContainerListResponse';
 import type { ContainerResponse } from '../models/ContainerResponse';
+import type { FileUploadResponse } from '../models/FileUploadResponse';
 import type { NetworkCreate } from '../models/NetworkCreate';
 import type { NetworkListResponse } from '../models/NetworkListResponse';
 import type { NetworkResponse } from '../models/NetworkResponse';
 import type { SuccessResponse } from '../models/SuccessResponse';
-import type { TemplateCreate } from '../models/TemplateCreate';
-import type { TemplateResponse } from '../models/TemplateResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
 export class DockerService {
-    /**
-     * Create Template
-     * @param requestBody
-     * @returns TemplateResponse Successful Response
-     * @throws ApiError
-     */
-    public static createTemplateDockerContainersTemplatePost(
-        requestBody: TemplateCreate,
-    ): CancelablePromise<TemplateResponse> {
-        return __request(OpenAPI, {
-            method: 'POST',
-            url: '/docker/containers/template',
-            body: requestBody,
-            mediaType: 'application/json',
-            errors: {
-                422: `Validation Error`,
-            },
-        });
-    }
     /**
      * List All Containers
      * @returns ContainerListResponse Successful Response
@@ -311,6 +292,40 @@ export class DockerService {
             path: {
                 'network_id': networkId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Upload Container File
+     * Upload a file to the container's application directory.
+     *
+     * The file will be saved to: {apps_directory}/{container_name}/{path}
+     *
+     * Returns the relative path to be used in the mount source.
+     * @param containerName
+     * @param path Relative path within the container's app directory (e.g., 'config/prometheus.yml')
+     * @param formData
+     * @returns FileUploadResponse Successful Response
+     * @throws ApiError
+     */
+    public static uploadContainerFileDockerContainersContainerNameFilesPost(
+        containerName: string,
+        path: string,
+        formData: Body_upload_container_file_docker_containers__container_name__files_post,
+    ): CancelablePromise<FileUploadResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/docker/containers/{container_name}/files',
+            path: {
+                'container_name': containerName,
+            },
+            query: {
+                'path': path,
+            },
+            formData: formData,
+            mediaType: 'multipart/form-data',
             errors: {
                 422: `Validation Error`,
             },
