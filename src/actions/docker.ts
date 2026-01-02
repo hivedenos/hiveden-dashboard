@@ -1,20 +1,9 @@
-'use server';
+"use server";
 
-import { revalidatePath } from 'next/cache';
-import '@/lib/api'; // Ensure client config
-import { DockerService } from '@/lib/client';
-import type { 
-  DataResponse, 
-  ContainerCreate, 
-  NetworkCreate, 
-  SuccessResponse,
-  TemplateCreate,
-  TemplateResponse,
-  ContainerResponse,
-  ContainerConfigResponse,
-  ContainerCreateResponse,
-  FileUploadResponse
-} from '@/lib/client';
+import "@/lib/api"; // Ensure client config
+import type { ContainerConfigResponse, ContainerCreate, ContainerCreateResponse, ContainerResponse, DataResponse, FileUploadResponse, NetworkCreate, SuccessResponse } from "@/lib/client";
+import { DockerService } from "@/lib/client";
+import { revalidatePath } from "next/cache";
 
 export async function listContainers(): Promise<DataResponse> {
   return DockerService.listAllContainersDockerContainersGet();
@@ -25,21 +14,13 @@ export async function createContainer(container: ContainerCreate): Promise<DataR
 }
 
 export async function uploadContainerFile(containerName: string, path: string, formData: FormData): Promise<FileUploadResponse> {
-  const file = formData.get('file');
-  
+  const file = formData.get("file");
+
   if (!file || !(file instanceof Blob)) {
     throw new Error("No valid file provided");
   }
 
-  return DockerService.uploadContainerFileDockerContainersContainerNameFilesPost(
-    containerName,
-    path,
-    { file: file }
-  );
-}
-
-export async function createTemplate(template: TemplateCreate): Promise<TemplateResponse> {
-  return DockerService.createTemplateDockerContainersTemplatePost(template);
+  return DockerService.uploadContainerFileDockerContainersContainerNameFilesPost(containerName, path, { file: file });
 }
 
 export async function getContainer(containerId: string): Promise<DataResponse> {
@@ -47,37 +28,37 @@ export async function getContainer(containerId: string): Promise<DataResponse> {
 }
 
 export async function getContainerConfiguration(containerId: string): Promise<ContainerConfigResponse> {
-    return DockerService.getContainerConfigurationDockerContainersContainerIdConfigGet(containerId);
+  return DockerService.getContainerConfigurationDockerContainersContainerIdConfigGet(containerId);
 }
 
 export async function updateContainerConfiguration(containerId: string, config: ContainerCreate): Promise<ContainerCreateResponse> {
-    const result = await DockerService.updateContainerConfigurationDockerContainersContainerIdPut(containerId, config);
-    revalidatePath('/docker');
-    revalidatePath(`/docker/${containerId}`);
-    return result;
+  const result = await DockerService.updateContainerConfigurationDockerContainersContainerIdPut(containerId, config);
+  revalidatePath("/docker");
+  revalidatePath(`/docker/${containerId}`);
+  return result;
 }
 
 export async function stopContainer(containerId: string): Promise<DataResponse> {
   const result = await DockerService.stopOneContainerDockerContainersContainerIdStopPost(containerId);
-  revalidatePath('/docker');
+  revalidatePath("/docker");
   return result;
 }
 
 export async function startContainer(containerId: string): Promise<DataResponse> {
   const result = await DockerService.startOneContainerDockerContainersContainerIdStartPost(containerId);
-  revalidatePath('/docker');
+  revalidatePath("/docker");
   return result;
 }
 
 export async function restartContainer(containerId: string): Promise<ContainerResponse> {
-    const result = await DockerService.restartOneContainerDockerContainersContainerIdRestartPost(containerId);
-    revalidatePath('/docker');
-    return result;
+  const result = await DockerService.restartOneContainerDockerContainersContainerIdRestartPost(containerId);
+  revalidatePath("/docker");
+  return result;
 }
 
 export async function removeContainer(containerId: string): Promise<SuccessResponse> {
   const result = await DockerService.removeOneContainerDockerContainersContainerIdDelete(containerId);
-  revalidatePath('/docker');
+  revalidatePath("/docker");
   return result;
 }
 
@@ -95,6 +76,6 @@ export async function getNetwork(networkId: string): Promise<DataResponse> {
 
 export async function removeNetwork(networkId: string): Promise<SuccessResponse> {
   const result = await DockerService.removeOneNetworkDockerNetworksNetworkIdDelete(networkId);
-  revalidatePath('/docker');
+  revalidatePath("/docker");
   return result;
 }
