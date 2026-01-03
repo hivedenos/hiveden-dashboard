@@ -4,5 +4,6 @@
 /* eslint-disable */
 export type HostConfig = {
     NetworkMode: string;
+    Privileged?: boolean;
 };
 

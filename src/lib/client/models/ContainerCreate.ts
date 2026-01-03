@@ -17,6 +17,7 @@ export type ContainerCreate = {
     devices?: (Array<Device> | null);
     labels?: (Record<string, string> | null);
     ingress_config?: (IngressConfig | null);
+    privileged?: (boolean | null);
     is_container?: boolean;
     enabled?: boolean;
     type?: string;

@@ -119,18 +119,24 @@ export function ContainerForm({ form }: ContainerFormProps) {
             <TextInput label="Image" placeholder="nginx:latest" required value={formData.image} onChange={(e) => handleChange("image", e.target.value)} />
           </SimpleGridWrapper>
 
-          <Checkbox
-            label="Ingress Subdomain"
-            checked={isIngressSubdomainEnabled}
-            onChange={(e) => {
-              handleChange("ingressSubdomainChecked", e.currentTarget.checked);
-              // Ensure ingress_config exists if we enable it
-              if (e.currentTarget.checked && !formData.ingress_config) {
-                handleChange("ingress_config", { domain: formData.name, port: 0 });
-              }
-            }}
-            mt="md"
-          />
+          <Group mt="md">
+            <Checkbox
+              label="Ingress Subdomain"
+              checked={isIngressSubdomainEnabled}
+              onChange={(e) => {
+                handleChange("ingressSubdomainChecked", e.currentTarget.checked);
+                // Ensure ingress_config exists if we enable it
+                if (e.currentTarget.checked && !formData.ingress_config) {
+                  handleChange("ingress_config", { domain: formData.name, port: 0 });
+                }
+              }}
+            />
+            <Checkbox
+              label="Privileged Mode"
+              checked={formData.privileged || false}
+              onChange={(e) => handleChange("privileged", e.currentTarget.checked)}
+            />
+          </Group>
           {showIngressPortError && (
             <Text c="red" size="sm" mt="xs">
               Ingress Subdomain is enabled but no Ingress Port is selected. Please select an Ingress Port in the Port Forwarding section.
