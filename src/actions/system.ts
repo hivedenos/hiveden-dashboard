@@ -8,12 +8,17 @@ import type {
   DomainUpdateResponse, 
   LocationListResponse, 
   SuccessResponse, 
-  UpdateLocationRequest 
+  UpdateLocationRequest,
+  DNSConfigResponse
 } from '@/lib/client';
 import { revalidatePath } from 'next/cache';
 
 export async function getSystemDomain(): Promise<DomainInfoResponse> {
   return SystemService.getSystemDomainSystemDomainGet();
+}
+
+export async function getDnsConfig(): Promise<DNSConfigResponse> {
+  return SystemService.getDnsConfigSystemDnsGet();
 }
 
 export async function updateSystemDomain(request: DomainUpdateRequest): Promise<DomainUpdateResponse> {

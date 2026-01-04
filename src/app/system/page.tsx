@@ -1,9 +1,10 @@
 'use client';
 
 import { Container, Tabs, Title, rem } from '@mantine/core';
-import { IconWorld, IconFolder } from '@tabler/icons-react';
+import { IconWorld, IconFolder, IconServer } from '@tabler/icons-react';
 import { DomainSettings } from '@/components/System/DomainSettings';
 import { LocationSettings } from '@/components/System/LocationSettings';
+import { DNSSettings } from '@/components/System/DNSSettings';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -40,6 +41,9 @@ function SystemPageContent() {
           <Tabs.Tab value="domain" leftSection={<IconWorld style={iconStyle} />}>
             Domain
           </Tabs.Tab>
+          <Tabs.Tab value="dns" leftSection={<IconServer style={iconStyle} />}>
+            DNS
+          </Tabs.Tab>
           <Tabs.Tab value="locations" leftSection={<IconFolder style={iconStyle} />}>
             Storage Locations
           </Tabs.Tab>
@@ -47,6 +51,10 @@ function SystemPageContent() {
 
         <Tabs.Panel value="domain">
           <DomainSettings />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="dns">
+          <DNSSettings />
         </Tabs.Panel>
 
         <Tabs.Panel value="locations">

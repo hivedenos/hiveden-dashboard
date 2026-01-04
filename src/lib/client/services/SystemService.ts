@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { DNSConfigResponse } from '../models/DNSConfigResponse';
 import type { DomainInfoResponse } from '../models/DomainInfoResponse';
 import type { DomainUpdateRequest } from '../models/DomainUpdateRequest';
 import type { DomainUpdateResponse } from '../models/DomainUpdateResponse';
@@ -42,6 +43,18 @@ export class SystemService {
             errors: {
                 422: `Validation Error`,
             },
+        });
+    }
+    /**
+     * Get Dns Config
+     * Get DNS configuration and Pi-hole status.
+     * @returns DNSConfigResponse Successful Response
+     * @throws ApiError
+     */
+    public static getDnsConfigSystemDnsGet(): CancelablePromise<DNSConfigResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/system/dns',
         });
     }
     /**

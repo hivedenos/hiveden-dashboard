@@ -39,6 +39,7 @@ interface WidgetItem {
   minW?: number;
   minH?: number;
   type: string;
+  props?: any;
 }
 
 export function DashboardLayout({ initialData }: DashboardLayoutProps) {
@@ -69,16 +70,18 @@ export function DashboardLayout({ initialData }: DashboardLayoutProps) {
   }, []);
 
   const handleLayoutChange = (currentLayout: any, allLayouts: any) => {
-    // We only update the position/size of existing items, we don't want to lose the 'type'
+    // We only update the position/size of existing items, we don't want to lose the 'type' or 'props'
     const updatedLayouts = { ...allLayouts };
     
-    // Map back the 'type' from the state to the new layout
+    // Map back the 'type' and 'props' from the state to the new layout
     const currentItems = layouts[currentBreakpoint as keyof typeof layouts] || [];
     const typeMap = new Map(currentItems.map(item => [item.i, item.type]));
+    const propsMap = new Map(currentItems.map(item => [item.i, item.props]));
 
     const mergedLayout = currentLayout.map((l: any) => ({
       ...l,
-      type: typeMap.get((l as any).i) || 'unknown'
+      type: typeMap.get((l as any).i) || 'unknown',
+      props: propsMap.get((l as any).i)
     }));
 
     setLayouts({
@@ -87,11 +90,11 @@ export function DashboardLayout({ initialData }: DashboardLayoutProps) {
     } as any);
   };
 
-  const handleAddWidget = (widgetType: string) => {
-    const widgetConfig = AvailableWidgets.find(w => w.id === widgetType);
+  const handleAddWidget = (widgetId: string) => {
+    const widgetConfig = AvailableWidgets.find(w => w.id === widgetId);
     if (!widgetConfig) return;
 
-    const newId = `${widgetType}-${Date.now()}`;
+    const newId = `${widgetId}-${Date.now()}`;
     const newItem: WidgetItem = {
       i: newId,
       x: 0,
@@ -100,7 +103,8 @@ export function DashboardLayout({ initialData }: DashboardLayoutProps) {
       h: widgetConfig.defaultH,
       minW: widgetConfig.minW,
       minH: widgetConfig.minH,
-      type: widgetType,
+      type: (widgetConfig as any).type || widgetId, // Use type from config if available, fallback to ID
+      props: (widgetConfig as any).props,
     };
 
     setLayouts({
@@ -135,15 +139,16 @@ export function DashboardLayout({ initialData }: DashboardLayoutProps) {
     if (!Component) return <Text>Widget not found: {item.type}</Text>;
 
     // Prepare props based on widget type
-    let props = {};
+    let props = { ...item.props };
     if (item.type === 'neofetch') {
       props = { 
+        ...props,
         osInfo: initialData.osInfo, 
         hwInfo: initialData.hwInfo, 
         version: initialData.version 
       };
     } else if (item.type === 'storage_locations') {
-      props = { locations: initialData.locations };
+      props = { ...props, locations: initialData.locations };
     }
 
     return (

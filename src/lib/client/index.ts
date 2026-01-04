@@ -34,6 +34,7 @@ export type { Disk } from './models/Disk';
 export type { DiskDetail } from './models/DiskDetail';
 export type { DiskDetailResponse } from './models/DiskDetailResponse';
 export type { DiskListResponse } from './models/DiskListResponse';
+export type { DNSConfigResponse } from './models/DNSConfigResponse';
 export type { DomainInfoResponse } from './models/DomainInfoResponse';
 export type { DomainUpdateRequest } from './models/DomainUpdateRequest';
 export type { DomainUpdateResponse } from './models/DomainUpdateResponse';
