@@ -3,6 +3,7 @@
 /* tslint:disable */
 /* eslint-disable */
 import type { DNSConfigResponse } from '../models/DNSConfigResponse';
+import type { DNSUpdateRequest } from '../models/DNSUpdateRequest';
 import type { DomainInfoResponse } from '../models/DomainInfoResponse';
 import type { DomainUpdateRequest } from '../models/DomainUpdateRequest';
 import type { DomainUpdateResponse } from '../models/DomainUpdateResponse';
@@ -55,6 +56,26 @@ export class SystemService {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/system/dns',
+        });
+    }
+    /**
+     * Update Dns Config
+     * Update DNS API key.
+     * @param requestBody
+     * @returns SuccessResponse Successful Response
+     * @throws ApiError
+     */
+    public static updateDnsConfigSystemDnsPut(
+        requestBody: DNSUpdateRequest,
+    ): CancelablePromise<SuccessResponse> {
+        return __request(OpenAPI, {
+            method: 'PUT',
+            url: '/system/dns',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
         });
     }
     /**

@@ -8,5 +8,6 @@ export type DNSConfigResponse = {
     enabled: boolean;
     domain?: (string | null);
     container_id?: (string | null);
+    api_key?: (string | null);
 };
 

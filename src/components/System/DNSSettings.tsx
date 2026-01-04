@@ -12,10 +12,13 @@ import {
   ThemeIcon, 
   TextInput,
   Switch,
-  ActionIcon
+  ActionIcon,
+  PasswordInput,
+  Button
 } from '@mantine/core';
 import { IconServer, IconAlertCircle, IconCheck, IconX, IconExternalLink } from '@tabler/icons-react';
-import { getDnsConfig } from '@/actions/system';
+import { notifications } from '@mantine/notifications';
+import { getDnsConfig, updateDnsConfig } from '@/actions/system';
 import type { DNSConfigResponse } from '@/lib/client';
 import Link from 'next/link';
 
@@ -23,12 +26,19 @@ export function DNSSettings() {
   const [data, setData] = useState<DNSConfigResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // API Key State
+  const [apiKey, setApiKey] = useState('');
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         const response = await getDnsConfig();
         setData(response);
+        if (response.api_key) {
+            setApiKey(response.api_key);
+        }
       } catch (err: any) {
         setError(err.message || 'Failed to fetch DNS configuration');
       } finally {
@@ -38,6 +48,29 @@ export function DNSSettings() {
 
     fetchData();
   }, []);
+
+  const handleUpdateApiKey = async () => {
+    setUpdating(true);
+    try {
+      await updateDnsConfig({ api_key: apiKey });
+      notifications.show({
+        title: 'Success',
+        message: 'DNS API Key updated successfully',
+        color: 'green',
+      });
+      // Optionally refresh data?
+      const response = await getDnsConfig();
+      setData(response);
+    } catch (err: any) {
+      notifications.show({
+        title: 'Error',
+        message: err.message || 'Failed to update API Key',
+        color: 'red',
+      });
+    } finally {
+      setUpdating(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -119,6 +152,25 @@ export function DNSSettings() {
                ) : null
              }
            />
+
+           <Stack gap="xs">
+               <PasswordInput
+                 label="DNS API Key"
+                 placeholder="Enter API Key"
+                 description="API Key for DNS management (e.g. Pi-hole API Token)"
+                 value={apiKey}
+                 onChange={(event) => setApiKey(event.currentTarget.value)}
+               />
+               <Group justify="flex-end">
+                   <Button 
+                     onClick={handleUpdateApiKey} 
+                     loading={updating}
+                     disabled={apiKey === (data.api_key || '')}
+                   >
+                     Update API Key
+                   </Button>
+               </Group>
+           </Stack>
 
            {data.message && (
              <Paper withBorder p="sm" bg="gray.0">
