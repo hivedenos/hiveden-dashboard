@@ -93,6 +93,7 @@ export type { StorageStrategyApplyResponse } from './models/StorageStrategyApply
 export type { StorageStrategyListResponse } from './models/StorageStrategyListResponse';
 export type { SuccessResponse } from './models/SuccessResponse';
 export type { SystemDevices } from './models/SystemDevices';
+export type { SystemdServiceStatus } from './models/SystemdServiceStatus';
 export type { UpdateLocationRequest } from './models/UpdateLocationRequest';
 export type { ValidationError } from './models/ValidationError';
 export type { VersionInfo } from './models/VersionInfo';
@@ -111,3 +112,4 @@ export { SharesService } from './services/SharesService';
 export { ShellService } from './services/ShellService';
 export { StorageService } from './services/StorageService';
 export { SystemService } from './services/SystemService';
+export { SystemdService } from './services/SystemdService';
