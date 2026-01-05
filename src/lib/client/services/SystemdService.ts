@@ -2,7 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-import type { DataResponse } from '../models/DataResponse';
+import type { SystemdServiceListResponse } from '../models/SystemdServiceListResponse';
+import type { SystemdServiceResponse } from '../models/SystemdServiceResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -10,10 +11,10 @@ export class SystemdService {
     /**
      * List Services
      * List all managed systemd services.
-     * @returns DataResponse Successful Response
+     * @returns SystemdServiceListResponse Successful Response
      * @throws ApiError
      */
-    public static listServicesSystemdServicesGet(): CancelablePromise<DataResponse> {
+    public static listServicesSystemdServicesGet(): CancelablePromise<SystemdServiceListResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/systemd/services',
@@ -23,12 +24,12 @@ export class SystemdService {
      * Get Service
      * Get status of a specific service.
      * @param serviceName
-     * @returns DataResponse Successful Response
+     * @returns SystemdServiceResponse Successful Response
      * @throws ApiError
      */
     public static getServiceSystemdServicesServiceNameGet(
         serviceName: string,
-    ): CancelablePromise<DataResponse> {
+    ): CancelablePromise<SystemdServiceResponse> {
         return __request(OpenAPI, {
             method: 'GET',
             url: '/systemd/services/{service_name}',
@@ -47,13 +48,13 @@ export class SystemdService {
      * but we can also use body. Using path here as per request.
      * @param serviceName
      * @param action
-     * @returns DataResponse Successful Response
+     * @returns SystemdServiceResponse Successful Response
      * @throws ApiError
      */
     public static manageServiceSystemdServicesServiceNameActionPost(
         serviceName: string,
         action: string,
-    ): CancelablePromise<DataResponse> {
+    ): CancelablePromise<SystemdServiceResponse> {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/systemd/services/{service_name}/{action}',
