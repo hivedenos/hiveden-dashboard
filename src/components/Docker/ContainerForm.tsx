@@ -5,13 +5,14 @@ import { UseContainerFormReturn } from "@/hooks/useContainerForm";
 import { ActionIcon, Autocomplete, Box, Button, Checkbox, Group, NumberInput, Paper, Select, Stack, Text, TextInput, Title } from "@mantine/core";
 import { IconPlus, IconTrash, IconUpload } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { DatabaseConfig } from "./DatabaseConfig";
 
 interface ContainerFormProps {
   form: UseContainerFormReturn;
 }
 
 export function ContainerForm({ form }: ContainerFormProps) {
-  const { formData, labelsList, mountErrors, handleChange, addCommandArg, removeCommandArg, updateCommandArg, addEnv, removeEnv, updateEnv, addPort, removePort, updatePort, addMount, removeMount, updateMount, addDevice, removeDevice, updateDevice, addLabel, removeLabel, updateLabel } = form;
+  const { formData, labelsList, setLabelsList, mountErrors, handleChange, addCommandArg, removeCommandArg, updateCommandArg, addEnv, removeEnv, updateEnv, addPort, removePort, updatePort, addMount, removeMount, updateMount, addDevice, removeDevice, updateDevice, addLabel, removeLabel, updateLabel } = form;
   const isIngressSubdomainEnabled = formData.ingressSubdomainChecked;
   // Initialize config if it doesn't exist but we need it for state
   const ingressConfig = formData.ingress_config || { domain: "", port: 0 };
@@ -20,6 +21,27 @@ export function ContainerForm({ form }: ContainerFormProps) {
   // Validation Logic
   const showIngressPortError = isIngressSubdomainEnabled && ingressPort === 0;
   const showIngressSubdomainError = !isIngressSubdomainEnabled && ingressPort > 0;
+
+  // Database Creation Handler
+  const handleDatabaseCreated = (dbName: string) => {
+    const key = "hiveden.database.name";
+    const existingIndex = labelsList.findIndex(l => l.key === key);
+    
+    if (existingIndex >= 0) {
+      updateLabel(existingIndex, "value", dbName);
+    } else {
+      setLabelsList(prev => [...prev, { key, value: dbName }]);
+    }
+  };
+
+  const handleDatabaseFound = (dbName: string) => {
+    const key = "hiveden.database.name";
+    const existingIndex = labelsList.findIndex(l => l.key === key);
+    
+    if (existingIndex === -1) {
+      setLabelsList(prev => [...prev, { key, value: dbName }]);
+    }
+  };
 
   // File Upload Logic
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -117,6 +139,10 @@ export function ContainerForm({ form }: ContainerFormProps) {
     }
   };
 
+  // Database Configuration Logic
+  const dbNameLabel = labelsList.find(l => l.key === "hiveden.database.name");
+  const databaseName = dbNameLabel?.value || formData.name;
+
   return (
     <Box pos="relative">
       {/* Hidden File Input */}
@@ -161,6 +187,12 @@ export function ContainerForm({ form }: ContainerFormProps) {
             </Text>
           )}
         </Paper>
+
+        <DatabaseConfig 
+            containerName={databaseName} 
+            onDatabaseCreated={handleDatabaseCreated} 
+            onDatabaseFound={handleDatabaseFound}
+        />
 
         <Paper p="md" withBorder radius="md">
           <Title order={4} mb="md">
