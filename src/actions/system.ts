@@ -38,6 +38,10 @@ export async function getSystemLocations(): Promise<LocationListResponse> {
   return SystemService.getSystemLocationsSystemLocationsGet();
 }
 
+export async function getComprehensiveLocations(): Promise<LocationListResponse> {
+  return SystemService.getComprehensiveLocationsSystemLocationsTreeGet();
+}
+
 export async function updateSystemLocation(key: string, request: UpdateLocationRequest): Promise<SuccessResponse> {
   const response = await SystemService.updateSystemLocationSystemLocationsKeyPut(key, request);
   revalidatePath('/system');

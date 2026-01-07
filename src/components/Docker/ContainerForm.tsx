@@ -1,5 +1,6 @@
 import { uploadContainerFile } from "@/actions/docker";
 import { getAllDevices } from "@/actions/info";
+import { getComprehensiveLocations } from "@/actions/system";
 import { UseContainerFormReturn } from "@/hooks/useContainerForm";
 import { ActionIcon, Autocomplete, Box, Button, Checkbox, Group, NumberInput, Paper, Select, Stack, Text, TextInput, Title } from "@mantine/core";
 import { IconPlus, IconTrash, IconUpload } from "@tabler/icons-react";
@@ -25,9 +26,12 @@ export function ContainerForm({ form }: ContainerFormProps) {
   const [uploadingIndex, setUploadingIndex] = useState<number | null>(null);
   const [targetMountIndex, setTargetMountIndex] = useState<number | null>(null);
 
-  // Devices Autocomplete Logic
+  // Devices & Locations Autocomplete Logic
   const [availableDevices, setAvailableDevices] = useState<any[]>([]);
+  const [systemLocations, setSystemLocations] = useState<string[]>([]);
+
   useEffect(() => {
+    // Fetch Devices
     getAllDevices()
       .then((response) => {
         const data = response.data as any;
@@ -64,6 +68,15 @@ export function ContainerForm({ form }: ContainerFormProps) {
         }
       })
       .catch(console.error);
+
+      // Fetch System Locations
+      getComprehensiveLocations()
+        .then((response) => {
+            if (response.data) {
+                setSystemLocations(response.data.map((l: any) => l.path));
+            }
+        })
+        .catch(console.error);
   }, []);
 
   const triggerUpload = (index: number) => {
@@ -254,11 +267,12 @@ export function ContainerForm({ form }: ContainerFormProps) {
             {formData.mounts?.map((mount, index) => (
               <Group key={index} grow preventGrowOverflow={false} wrap="nowrap" align="flex-start">
                 <Group grow preventGrowOverflow={false} wrap="wrap" w="100%">
-                  <TextInput
+                  <Autocomplete
                     placeholder="Source Path (Host)"
                     value={mount.source}
-                    onChange={(e) => updateMount(index, "source", e.target.value)}
+                    onChange={(val) => updateMount(index, "source", val)}
                     error={mountErrors[index]?.source}
+                    data={systemLocations}
                     style={{ flex: "1 1 30%" }}
                     rightSection={
                       <ActionIcon variant="subtle" color="blue" onClick={() => triggerUpload(index)} loading={uploadingIndex === index} title="Upload file">

@@ -116,4 +116,19 @@ export class SystemService {
             },
         });
     }
+    /**
+     * Get Comprehensive Locations
+     * Retrieve a comprehensive list of all system locations including:
+     * 1. All Btrfs shares
+     * 2. All system storage locations
+     * 3. Expanded directories for the 'apps' location (2 levels deep)
+     * @returns LocationListResponse Successful Response
+     * @throws ApiError
+     */
+    public static getComprehensiveLocationsSystemLocationsTreeGet(): CancelablePromise<LocationListResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/system/locations/tree',
+        });
+    }
 }

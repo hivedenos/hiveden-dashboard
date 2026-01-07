@@ -1,18 +1,20 @@
 "use client";
 
 import { createSmbShare, deleteSmbShare } from "@/actions/shares";
+import { getComprehensiveLocations } from "@/actions/system";
 import { SystemdServiceActions } from "@/components/Systemd/SystemdServiceActions";
 import type { SMBShare } from "@/lib/client";
-import { ActionIcon, Badge, Box, Button, Checkbox, Group, Modal, Stack, Table, TextInput } from "@mantine/core";
+import { ActionIcon, Autocomplete, Badge, Box, Button, Checkbox, Group, Modal, Stack, Table, TextInput } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export function SMBList({ shares }: { shares: SMBShare[] }) {
   const [loading, setLoading] = useState<string | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
   const [creating, setCreating] = useState(false);
+  const [systemLocations, setSystemLocations] = useState<string[]>([]);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -23,6 +25,18 @@ export function SMBList({ shares }: { shares: SMBShare[] }) {
     browsable: true,
     guest_ok: false,
   });
+
+  useEffect(() => {
+    if (opened) {
+      getComprehensiveLocations()
+        .then((response) => {
+          if (response.data) {
+            setSystemLocations(response.data.map((l: any) => l.path));
+          }
+        })
+        .catch(console.error);
+    }
+  }, [opened]);
 
   const handleDelete = async (name: string) => {
     if (!confirm("Are you sure you want to delete this share?")) return;
@@ -133,7 +147,14 @@ export function SMBList({ shares }: { shares: SMBShare[] }) {
       <Modal opened={opened} onClose={close} title="Create SMB Share">
         <Stack>
           <TextInput label="Name" placeholder="share_name" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-          <TextInput label="Path" placeholder="/mnt/storage/share" required value={formData.path} onChange={(e) => setFormData({ ...formData, path: e.target.value })} />
+          <Autocomplete 
+            label="Path" 
+            placeholder="/mnt/storage/share" 
+            required 
+            value={formData.path} 
+            onChange={(val) => setFormData({ ...formData, path: val })}
+            data={systemLocations}
+          />
           <TextInput label="Comment" placeholder="Optional description" value={formData.comment} onChange={(e) => setFormData({ ...formData, comment: e.target.value })} />
           <Checkbox label="Read Only" checked={formData.read_only} onChange={(e) => setFormData({ ...formData, read_only: e.currentTarget.checked })} />
           <Checkbox label="Browsable" checked={formData.browsable} onChange={(e) => setFormData({ ...formData, browsable: e.currentTarget.checked })} />
