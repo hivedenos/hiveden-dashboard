@@ -21,5 +21,12 @@ export async function listUsers(): Promise<DatabaseUserListResponse> {
 export async function createDatabase(db: DatabaseCreateRequest): Promise<SuccessResponse> {
   const response = await DatabaseService.createDatabaseDbDatabasesPost(db);
   revalidatePath('/docker'); 
+  revalidatePath('/system');
+  return response;
+}
+
+export async function deleteDatabase(dbName: string): Promise<SuccessResponse> {
+  const response = await DatabaseService.deleteDatabaseDbDatabasesDbNameDelete(dbName);
+  revalidatePath('/system');
   return response;
 }

@@ -43,6 +43,27 @@ export class DatabaseService {
         });
     }
     /**
+     * Delete Database
+     * Delete a database.
+     * @param dbName
+     * @returns SuccessResponse Successful Response
+     * @throws ApiError
+     */
+    public static deleteDatabaseDbDatabasesDbNameDelete(
+        dbName: string,
+    ): CancelablePromise<SuccessResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/db/databases/{db_name}',
+            path: {
+                'db_name': dbName,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
      * List Users
      * List all database users.
      * @returns DatabaseUserListResponse Successful Response
