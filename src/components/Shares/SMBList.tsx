@@ -3,7 +3,7 @@
 import { createSmbShare, deleteSmbShare } from "@/actions/shares";
 import { getComprehensiveLocations } from "@/actions/system";
 import { SystemdServiceActions } from "@/components/Systemd/SystemdServiceActions";
-import type { SMBShare } from "@/lib/client";
+import type { FilesystemLocation, SMBShare } from "@/lib/client";
 import { ActionIcon, Autocomplete, Badge, Box, Button, Checkbox, Group, Modal, Stack, Table, TextInput } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
@@ -31,7 +31,7 @@ export function SMBList({ shares }: { shares: SMBShare[] }) {
       getComprehensiveLocations()
         .then((response) => {
           if (response.data) {
-            setSystemLocations(response.data.map((l: any) => l.path));
+            setSystemLocations(response.data.map((l: FilesystemLocation) => l.path).filter((fsPath, index, arr) => arr.indexOf(fsPath) === index));
           }
         })
         .catch(console.error);
@@ -146,18 +146,37 @@ export function SMBList({ shares }: { shares: SMBShare[] }) {
 
       <Modal opened={opened} onClose={close} title="Create SMB Share">
         <Stack>
-          <TextInput label="Name" placeholder="share_name" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
-          <Autocomplete 
-            label="Path" 
-            placeholder="/mnt/storage/share" 
-            required 
-            value={formData.path} 
+          <TextInput
+            label="Name"
+            placeholder="share_name"
+            required
+            value={formData.name}
+            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          />
+          <Autocomplete
+            label="Path"
+            placeholder="/mnt/storage/share"
+            required
+            value={formData.path}
             onChange={(val) => setFormData({ ...formData, path: val })}
             data={systemLocations}
           />
-          <TextInput label="Comment" placeholder="Optional description" value={formData.comment} onChange={(e) => setFormData({ ...formData, comment: e.target.value })} />
-          <Checkbox label="Read Only" checked={formData.read_only} onChange={(e) => setFormData({ ...formData, read_only: e.currentTarget.checked })} />
-          <Checkbox label="Browsable" checked={formData.browsable} onChange={(e) => setFormData({ ...formData, browsable: e.currentTarget.checked })} />
+          <TextInput
+            label="Comment"
+            placeholder="Optional description"
+            value={formData.comment}
+            onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+          />
+          <Checkbox
+            label="Read Only"
+            checked={formData.read_only}
+            onChange={(e) => setFormData({ ...formData, read_only: e.currentTarget.checked })}
+          />
+          <Checkbox
+            label="Browsable"
+            checked={formData.browsable}
+            onChange={(e) => setFormData({ ...formData, browsable: e.currentTarget.checked })}
+          />
           <Checkbox label="Guest OK" checked={formData.guest_ok} onChange={(e) => setFormData({ ...formData, guest_ok: e.currentTarget.checked })} />
           <Button onClick={handleCreate} loading={creating} mt="md">
             Create

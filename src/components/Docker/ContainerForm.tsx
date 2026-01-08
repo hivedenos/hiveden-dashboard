@@ -2,17 +2,17 @@ import { uploadContainerFile } from "@/actions/docker";
 import { getAllDevices } from "@/actions/info";
 import { getComprehensiveLocations } from "@/actions/system";
 import { UseContainerFormReturn } from "@/hooks/useContainerForm";
+import { FilesystemLocation } from "@/lib/client";
 import { ActionIcon, Autocomplete, Box, Button, Checkbox, Group, NumberInput, Paper, Select, Stack, Text, TextInput, Title } from "@mantine/core";
 import { IconPlus, IconTrash, IconUpload } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
-import { DatabaseConfig } from "./DatabaseConfig";
 
 interface ContainerFormProps {
   form: UseContainerFormReturn;
 }
 
 export function ContainerForm({ form }: ContainerFormProps) {
-  const { formData, labelsList, setLabelsList, mountErrors, handleChange, addCommandArg, removeCommandArg, updateCommandArg, addEnv, removeEnv, updateEnv, addPort, removePort, updatePort, addMount, removeMount, updateMount, addDevice, removeDevice, updateDevice, addLabel, removeLabel, updateLabel } = form;
+  const { formData, labelsList, mountErrors, handleChange, addCommandArg, removeCommandArg, updateCommandArg, addEnv, removeEnv, updateEnv, addPort, removePort, updatePort, addMount, removeMount, updateMount, addDevice, removeDevice, updateDevice, addLabel, removeLabel, updateLabel } = form;
   const isIngressSubdomainEnabled = formData.ingressSubdomainChecked;
   // Initialize config if it doesn't exist but we need it for state
   const ingressConfig = formData.ingress_config || { domain: "", port: 0 };
@@ -21,27 +21,6 @@ export function ContainerForm({ form }: ContainerFormProps) {
   // Validation Logic
   const showIngressPortError = isIngressSubdomainEnabled && ingressPort === 0;
   const showIngressSubdomainError = !isIngressSubdomainEnabled && ingressPort > 0;
-
-  // Database Creation Handler
-  const handleDatabaseCreated = (dbName: string) => {
-    const key = "hiveden.database.name";
-    const existingIndex = labelsList.findIndex(l => l.key === key);
-    
-    if (existingIndex >= 0) {
-      updateLabel(existingIndex, "value", dbName);
-    } else {
-      setLabelsList(prev => [...prev, { key, value: dbName }]);
-    }
-  };
-
-  const handleDatabaseFound = (dbName: string) => {
-    const key = "hiveden.database.name";
-    const existingIndex = labelsList.findIndex(l => l.key === key);
-    
-    if (existingIndex === -1) {
-      setLabelsList(prev => [...prev, { key, value: dbName }]);
-    }
-  };
 
   // File Upload Logic
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -60,24 +39,24 @@ export function ContainerForm({ form }: ContainerFormProps) {
         if (data) {
           const groups: { group: string; items: string[] }[] = [];
 
-        const addGroup = (category: string, devices: any[], usePath: boolean = false) => {
-          if (!Array.isArray(devices)) return;
-          const items: string[] = [];
-          devices.forEach((d) => {
-            if (usePath) {
-              if (d.path && d.path.startsWith('/')) items.push(d.path);
-            } else if (d.logical_name) {
-              d.logical_name.split(',').forEach((p: string) => {
-                const trimmed = p.trim();
-                if (trimmed && trimmed.startsWith('/')) items.push(trimmed);
-              });
+          const addGroup = (category: string, devices: any[], usePath: boolean = false) => {
+            if (!Array.isArray(devices)) return;
+            const items: string[] = [];
+            devices.forEach((d) => {
+              if (usePath) {
+                if (d.path && d.path.startsWith("/")) items.push(d.path);
+              } else if (d.logical_name) {
+                d.logical_name.split(",").forEach((p: string) => {
+                  const trimmed = p.trim();
+                  if (trimmed && trimmed.startsWith("/")) items.push(trimmed);
+                });
+              }
+            });
+
+            if (items.length > 0) {
+              groups.push({ group: category, items: [...new Set(items)] });
             }
-          });
-          
-          if (items.length > 0) {
-            groups.push({ group: category, items: [...new Set(items)] });
-          }
-        };
+          };
 
           addGroup("Storage", data.storage, true);
           addGroup("Video", data.video);
@@ -91,14 +70,14 @@ export function ContainerForm({ form }: ContainerFormProps) {
       })
       .catch(console.error);
 
-      // Fetch System Locations
-      getComprehensiveLocations()
-        .then((response) => {
-            if (response.data) {
-                setSystemLocations(response.data.map((l: any) => l.path));
-            }
-        })
-        .catch(console.error);
+    // Fetch System Locations
+    getComprehensiveLocations()
+      .then((response) => {
+        if (response.data) {
+          setSystemLocations(response.data.map((l: FilesystemLocation) => l.path).filter((fsPath, index, arr) => arr.indexOf(fsPath) === index));
+        }
+      })
+      .catch(console.error);
   }, []);
 
   const triggerUpload = (index: number) => {
@@ -139,10 +118,6 @@ export function ContainerForm({ form }: ContainerFormProps) {
     }
   };
 
-  // Database Configuration Logic
-  const dbNameLabel = labelsList.find(l => l.key === "hiveden.database.name");
-  const databaseName = dbNameLabel?.value || formData.name;
-
   return (
     <Box pos="relative">
       {/* Hidden File Input */}
@@ -170,11 +145,7 @@ export function ContainerForm({ form }: ContainerFormProps) {
                 }
               }}
             />
-            <Checkbox
-              label="Privileged Mode"
-              checked={formData.privileged || false}
-              onChange={(e) => handleChange("privileged", e.currentTarget.checked)}
-            />
+            <Checkbox label="Privileged Mode" checked={formData.privileged || false} onChange={(e) => handleChange("privileged", e.currentTarget.checked)} />
           </Group>
           {showIngressPortError && (
             <Text c="red" size="sm" mt="xs">
@@ -187,12 +158,6 @@ export function ContainerForm({ form }: ContainerFormProps) {
             </Text>
           )}
         </Paper>
-
-        <DatabaseConfig 
-            containerName={databaseName} 
-            onDatabaseCreated={handleDatabaseCreated} 
-            onDatabaseFound={handleDatabaseFound}
-        />
 
         <Paper p="md" withBorder radius="md">
           <Title order={4} mb="md">
@@ -336,26 +301,20 @@ export function ContainerForm({ form }: ContainerFormProps) {
           <Title order={4} mb="md">
             Devices
           </Title>
-                    <Stack>
-                      {formData.devices?.map((device, index) => (
-                        <Group key={index} grow preventGrowOverflow={false} wrap="nowrap">
-                          <Autocomplete
-                            placeholder="Path on Host (/dev/sda)"
-                            value={device.path_on_host}
-                            onChange={(val) => {
-                              updateDevice(index, "path_on_host", val);
-                              updateDevice(index, "path_in_container", val);
-                            }}
-                            data={availableDevices}
-                          />
-                          <TextInput
-                            placeholder="Path in Container"
-                            value={device.path_in_container}
-                            readOnly
-                            variant="filled"
-                          />
-                          <TextInput
-                            placeholder="Permissions (rwm)" value={device.cgroup_permissions} onChange={(e) => updateDevice(index, "cgroup_permissions", e.target.value)} style={{ maxWidth: "100px" }} />
+          <Stack>
+            {formData.devices?.map((device, index) => (
+              <Group key={index} grow preventGrowOverflow={false} wrap="nowrap">
+                <Autocomplete
+                  placeholder="Path on Host (/dev/sda)"
+                  value={device.path_on_host}
+                  onChange={(val) => {
+                    updateDevice(index, "path_on_host", val);
+                    updateDevice(index, "path_in_container", val);
+                  }}
+                  data={availableDevices}
+                />
+                <TextInput placeholder="Path in Container" value={device.path_in_container} readOnly variant="filled" />
+                <TextInput placeholder="Permissions (rwm)" value={device.cgroup_permissions} onChange={(e) => updateDevice(index, "cgroup_permissions", e.target.value)} style={{ maxWidth: "100px" }} />
                 <ActionIcon color="red" variant="subtle" onClick={() => removeDevice(index)}>
                   <IconTrash size={16} />
                 </ActionIcon>
