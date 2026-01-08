@@ -1,18 +1,45 @@
 import { uploadContainerFile } from "@/actions/docker";
+import { searchDockerImages, getDockerImageTags } from "@/actions/docker-hub";
 import { getAllDevices } from "@/actions/info";
 import { getComprehensiveLocations } from "@/actions/system";
 import { UseContainerFormReturn } from "@/hooks/useContainerForm";
 import { FilesystemLocation } from "@/lib/client";
 import { ActionIcon, Autocomplete, Box, Button, Checkbox, Group, NumberInput, Paper, Select, Stack, Text, TextInput, Title } from "@mantine/core";
+import { useDebouncedValue } from "@mantine/hooks";
 import { IconPlus, IconTrash, IconUpload } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
+import { DatabaseConfig } from "./DatabaseConfig";
 
 interface ContainerFormProps {
   form: UseContainerFormReturn;
 }
 
 export function ContainerForm({ form }: ContainerFormProps) {
-  const { formData, labelsList, mountErrors, handleChange, addCommandArg, removeCommandArg, updateCommandArg, addEnv, removeEnv, updateEnv, addPort, removePort, updatePort, addMount, removeMount, updateMount, addDevice, removeDevice, updateDevice, addLabel, removeLabel, updateLabel } = form;
+  const {
+    formData,
+    labelsList,
+    setLabelsList,
+    mountErrors,
+    handleChange,
+    addCommandArg,
+    removeCommandArg,
+    updateCommandArg,
+    addEnv,
+    removeEnv,
+    updateEnv,
+    addPort,
+    removePort,
+    updatePort,
+    addMount,
+    removeMount,
+    updateMount,
+    addDevice,
+    removeDevice,
+    updateDevice,
+    addLabel,
+    removeLabel,
+    updateLabel,
+  } = form;
   const isIngressSubdomainEnabled = formData.ingressSubdomainChecked;
   // Initialize config if it doesn't exist but we need it for state
   const ingressConfig = formData.ingress_config || { domain: "", port: 0 };
@@ -21,6 +48,27 @@ export function ContainerForm({ form }: ContainerFormProps) {
   // Validation Logic
   const showIngressPortError = isIngressSubdomainEnabled && ingressPort === 0;
   const showIngressSubdomainError = !isIngressSubdomainEnabled && ingressPort > 0;
+
+  // Database Creation Handler
+  const handleDatabaseCreated = (dbName: string) => {
+    const key = "hiveden.database.name";
+    const existingIndex = labelsList.findIndex((l) => l.key === key);
+
+    if (existingIndex >= 0) {
+      updateLabel(existingIndex, "value", dbName);
+    } else {
+      setLabelsList((prev) => [...prev, { key, value: dbName }]);
+    }
+  };
+
+  const handleDatabaseFound = (dbName: string) => {
+    const key = "hiveden.database.name";
+    const existingIndex = labelsList.findIndex((l) => l.key === key);
+
+    if (existingIndex === -1) {
+      setLabelsList((prev) => [...prev, { key, value: dbName }]);
+    }
+  };
 
   // File Upload Logic
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -118,6 +166,39 @@ export function ContainerForm({ form }: ContainerFormProps) {
     }
   };
 
+  // Database Configuration Logic
+  const dbNameLabel = labelsList.find((l) => l.key === "hiveden.database.name");
+  const databaseName = dbNameLabel?.value || formData.name;
+
+  // Image Parsing and Autocomplete
+  const splitImage = (fullImage: string) => {
+    if (!fullImage) return { name: '', tag: 'latest' };
+    const lastColon = fullImage.lastIndexOf(':');
+    if (lastColon === -1) return { name: fullImage, tag: 'latest' };
+    const afterColon = fullImage.substring(lastColon + 1);
+    if (afterColon.includes('/')) return { name: fullImage, tag: 'latest' }; 
+    return { name: fullImage.substring(0, lastColon), tag: afterColon };
+  };
+
+  const { name: imageName, tag: imageTag } = splitImage(formData.image);
+  
+  const [imageSuggestions, setImageSuggestions] = useState<string[]>([]);
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+  
+  const [debouncedImageName] = useDebouncedValue(imageName, 500);
+
+  useEffect(() => {
+      if (debouncedImageName && debouncedImageName.length > 2) {
+          searchDockerImages(debouncedImageName).then(setImageSuggestions);
+          // Also fetch tags for the current valid image name
+          getDockerImageTags(debouncedImageName).then(setTagSuggestions);
+      }
+  }, [debouncedImageName]);
+
+  const updateImage = (newName: string, newTag: string) => {
+      handleChange('image', `${newName}:${newTag}`);
+  };
+
   return (
     <Box pos="relative">
       {/* Hidden File Input */}
@@ -129,8 +210,33 @@ export function ContainerForm({ form }: ContainerFormProps) {
             <Title order={4}>General Configuration</Title>
           </Group>
           <SimpleGridWrapper>
-            <TextInput label="Name" placeholder="my-container" required value={formData.name} onChange={(e) => handleChange("name", e.target.value)} />
-            <TextInput label="Image" placeholder="nginx:latest" required value={formData.image} onChange={(e) => handleChange("image", e.target.value)} />
+            <TextInput
+              label="Name"
+              placeholder="my-container"
+              required
+              value={formData.name}
+              onChange={(e) => handleChange("name", e.target.value)}
+            />
+            <Group gap="xs" grow align="flex-start">
+                <Autocomplete
+                    label="Image"
+                    placeholder="nginx"
+                    required
+                    value={imageName}
+                    onChange={(val) => updateImage(val, imageTag)}
+                    data={imageSuggestions}
+                    style={{ flex: 2 }}
+                />
+                <Autocomplete
+                    label="Tag"
+                    placeholder="latest"
+                    required
+                    value={imageTag}
+                    onChange={(val) => updateImage(imageName, val)}
+                    data={tagSuggestions}
+                    style={{ flex: 1 }}
+                />
+            </Group>
           </SimpleGridWrapper>
 
           <Group mt="md">
@@ -145,7 +251,11 @@ export function ContainerForm({ form }: ContainerFormProps) {
                 }
               }}
             />
-            <Checkbox label="Privileged Mode" checked={formData.privileged || false} onChange={(e) => handleChange("privileged", e.currentTarget.checked)} />
+            <Checkbox
+              label="Privileged Mode"
+              checked={formData.privileged || false}
+              onChange={(e) => handleChange("privileged", e.currentTarget.checked)}
+            />
           </Group>
           {showIngressPortError && (
             <Text c="red" size="sm" mt="xs">
@@ -158,6 +268,8 @@ export function ContainerForm({ form }: ContainerFormProps) {
             </Text>
           )}
         </Paper>
+
+        <DatabaseConfig containerName={databaseName} onDatabaseCreated={handleDatabaseCreated} onDatabaseFound={handleDatabaseFound} />
 
         <Paper p="md" withBorder radius="md">
           <Title order={4} mb="md">
@@ -218,7 +330,13 @@ export function ContainerForm({ form }: ContainerFormProps) {
                     padding: "4px",
                   }}
                 >
-                  <NumberInput placeholder="Host Port" value={port.host_port} onChange={(val) => updatePort(index, "host_port", val)} min={1} max={65535} />
+                  <NumberInput
+                    placeholder="Host Port"
+                    value={port.host_port}
+                    onChange={(val) => updatePort(index, "host_port", val)}
+                    min={1}
+                    max={65535}
+                  />
                   <NumberInput
                     placeholder="Container Port"
                     value={port.container_port}
@@ -272,18 +390,45 @@ export function ContainerForm({ form }: ContainerFormProps) {
                     data={systemLocations}
                     style={{ flex: "1 1 30%" }}
                     rightSection={
-                      <ActionIcon variant="subtle" color="blue" onClick={() => triggerUpload(index)} loading={uploadingIndex === index} title="Upload file">
+                      <ActionIcon
+                        variant="subtle"
+                        color="blue"
+                        onClick={() => triggerUpload(index)}
+                        loading={uploadingIndex === index}
+                        title="Upload file"
+                      >
                         <IconUpload size={16} />
                       </ActionIcon>
                     }
                   />
-                  <TextInput placeholder="Target Path (Container)" value={mount.target} onChange={(e) => updateMount(index, "target", e.target.value)} style={{ flex: "1 1 30%" }} />
-                  <Select value={mount.type} onChange={(val) => updateMount(index, "type", val)} data={["bind"]} allowDeselect={false} style={{ flex: "1 1 15%" }} />
+                  <TextInput
+                    placeholder="Target Path (Container)"
+                    value={mount.target}
+                    onChange={(e) => updateMount(index, "target", e.target.value)}
+                    style={{ flex: "1 1 30%" }}
+                  />
+                  <Select
+                    value={mount.type}
+                    onChange={(val) => updateMount(index, "type", val)}
+                    data={["bind"]}
+                    allowDeselect={false}
+                    style={{ flex: "1 1 15%" }}
+                  />
                 </Group>
 
                 <Stack gap="xs">
-                  <Checkbox label="Is App Dir" checked={mount.is_app_directory || false} onChange={(event) => updateMount(index, "is_app_directory", event.currentTarget.checked)} styles={{ label: { whiteSpace: "nowrap" } }} />
-                  <Checkbox label="Read Only" checked={mount.read_only || false} onChange={(event) => updateMount(index, "read_only", event.currentTarget.checked)} styles={{ label: { whiteSpace: "nowrap" } }} />
+                  <Checkbox
+                    label="Is App Dir"
+                    checked={mount.is_app_directory || false}
+                    onChange={(event) => updateMount(index, "is_app_directory", event.currentTarget.checked)}
+                    styles={{ label: { whiteSpace: "nowrap" } }}
+                  />
+                  <Checkbox
+                    label="Read Only"
+                    checked={mount.read_only || false}
+                    onChange={(event) => updateMount(index, "read_only", event.currentTarget.checked)}
+                    styles={{ label: { whiteSpace: "nowrap" } }}
+                  />
                 </Stack>
 
                 <ActionIcon color="red" variant="subtle" onClick={() => removeMount(index)} mt={4}>
@@ -314,7 +459,12 @@ export function ContainerForm({ form }: ContainerFormProps) {
                   data={availableDevices}
                 />
                 <TextInput placeholder="Path in Container" value={device.path_in_container} readOnly variant="filled" />
-                <TextInput placeholder="Permissions (rwm)" value={device.cgroup_permissions} onChange={(e) => updateDevice(index, "cgroup_permissions", e.target.value)} style={{ maxWidth: "100px" }} />
+                <TextInput
+                  placeholder="Permissions (rwm)"
+                  value={device.cgroup_permissions}
+                  onChange={(e) => updateDevice(index, "cgroup_permissions", e.target.value)}
+                  style={{ maxWidth: "100px" }}
+                />
                 <ActionIcon color="red" variant="subtle" onClick={() => removeDevice(index)}>
                   <IconTrash size={16} />
                 </ActionIcon>
@@ -351,5 +501,7 @@ export function ContainerForm({ form }: ContainerFormProps) {
 }
 
 function SimpleGridWrapper({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "var(--mantine-spacing-md)" }}>{children}</div>;
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "var(--mantine-spacing-md)" }}>{children}</div>
+  );
 }
