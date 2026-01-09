@@ -4,5 +4,6 @@
 /* eslint-disable */
 export type UpdateLocationRequest = {
     new_path: string;
+    should_migrate_data?: boolean;
 };
 

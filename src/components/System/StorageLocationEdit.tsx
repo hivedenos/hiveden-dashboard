@@ -10,7 +10,8 @@ import {
   Group, 
   LoadingOverlay, 
   Text,
-  Alert
+  Alert,
+  Checkbox
 } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
 import { useRouter } from 'next/navigation';
@@ -33,6 +34,7 @@ export function StorageLocationEdit({ location, volumes }: StorageLocationEditPr
   
   const [selection, setSelection] = useState<string | null>(initialIsCustom ? 'custom' : location.path);
   const [customPath, setCustomPath] = useState(initialIsCustom ? location.path : '');
+  const [shouldMigrateData, setShouldMigrateData] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const volumeOptions = volumes.map(v => ({ 
@@ -64,7 +66,10 @@ export function StorageLocationEdit({ location, volumes }: StorageLocationEditPr
     setError(null);
     
     try {
-      await updateSystemLocation(location.key, { new_path: path });
+      await updateSystemLocation(location.key, { 
+        new_path: path,
+        should_migrate_data: shouldMigrateData 
+      });
       
       notifications.show({
         title: 'Success',
@@ -126,6 +131,14 @@ export function StorageLocationEdit({ location, volumes }: StorageLocationEditPr
             error={error && customPathMode ? error : null}
           />
         )}
+
+        <Checkbox
+          label="Migrate existing data"
+          description="Move current files to the new location"
+          checked={shouldMigrateData}
+          onChange={(e) => setShouldMigrateData(e.currentTarget.checked)}
+          mb="xl"
+        />
 
         <Group justify="flex-end" mt="xl">
           <Button component={Link} href="/system?tab=locations" variant="default">
