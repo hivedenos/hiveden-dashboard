@@ -36,12 +36,13 @@ export function DatabaseConfig({ containerName, onDatabaseCreated, onDatabaseFou
   
   const [customDbName, setCustomDbName] = useState(containerName);
   const [debouncedDbName] = useDebouncedValue(customDbName, 500);
+  const [isDirty, setIsDirty] = useState(false);
 
   useEffect(() => {
-    if (containerName && !customDbName) {
+    if (containerName && !isDirty) {
         setCustomDbName(containerName);
     }
-  }, [containerName]);
+  }, [containerName, isDirty]);
 
   const fetchData = async (nameToCheck: string) => {
     if (!nameToCheck) {
@@ -169,7 +170,10 @@ export function DatabaseConfig({ containerName, onDatabaseCreated, onDatabaseFou
             <TextInput 
                 label="Database Name"
                 value={customDbName}
-                onChange={(e) => setCustomDbName(e.target.value)}
+                onChange={(e) => {
+                    setCustomDbName(e.target.value);
+                    setIsDirty(true);
+                }}
                 description={
                     <Text component="span" size="xs">
                         Database <Text span fw={700}>{customDbName}</Text> does not exist.
