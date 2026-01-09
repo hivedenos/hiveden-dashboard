@@ -20,6 +20,7 @@ export function ContainerActions({ containerId, containerState, size }: Containe
   const [opened, { open, close }] = useDisclosure(false);
   const [deleteVolumes, setDeleteVolumes] = useState(true);
   const [deleteDatabase, setDeleteDatabase] = useState(true);
+  const [deleteDns, setDeleteDns] = useState(true);
   
   const router = useRouter();
 
@@ -89,7 +90,7 @@ export function ContainerActions({ containerId, containerState, size }: Containe
   const confirmDelete = async () => {
     setLoading("delete");
     try {
-      await removeContainer(containerId, deleteDatabase, deleteVolumes);
+      await removeContainer(containerId, deleteDatabase, deleteVolumes, deleteDns);
       notifications.show({
         title: "Container deleted",
         message: "The container has been deleted successfully",
@@ -131,6 +132,12 @@ export function ContainerActions({ containerId, containerState, size }: Containe
                 checked={deleteDatabase} 
                 onChange={(e) => setDeleteDatabase(e.currentTarget.checked)} 
                 description="Removes associated database."
+            />
+            <Checkbox 
+                label="Delete DNS Entry" 
+                checked={deleteDns} 
+                onChange={(e) => setDeleteDns(e.currentTarget.checked)} 
+                description="Removes associated DNS record."
             />
             <Group justify="flex-end" mt="md">
                 <Button variant="default" onClick={close}>Cancel</Button>

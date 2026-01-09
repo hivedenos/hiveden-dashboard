@@ -96,6 +96,7 @@ export class DockerService {
      * @param containerId
      * @param deleteDatabase Delete the associated database if it exists.
      * @param deleteVolumes Delete the container's application directory.
+     * @param deleteDns Delete associated DNS entry from Pi-hole.
      * @returns SuccessResponse Successful Response
      * @throws ApiError
      */
@@ -103,6 +104,7 @@ export class DockerService {
         containerId: string,
         deleteDatabase: boolean = false,
         deleteVolumes: boolean = false,
+        deleteDns: boolean = false,
     ): CancelablePromise<SuccessResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
@@ -113,6 +115,7 @@ export class DockerService {
             query: {
                 'delete_database': deleteDatabase,
                 'delete_volumes': deleteVolumes,
+                'delete_dns': deleteDns,
             },
             errors: {
                 400: `Bad Request: Container is running or other client-side error.`,
