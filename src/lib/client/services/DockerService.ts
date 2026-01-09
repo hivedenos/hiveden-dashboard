@@ -94,17 +94,25 @@ export class DockerService {
     /**
      * Remove One Container
      * @param containerId
+     * @param deleteDatabase Delete the associated database if it exists.
+     * @param deleteVolumes Delete the container's application directory.
      * @returns SuccessResponse Successful Response
      * @throws ApiError
      */
     public static removeOneContainerDockerContainersContainerIdDelete(
         containerId: string,
+        deleteDatabase: boolean = false,
+        deleteVolumes: boolean = false,
     ): CancelablePromise<SuccessResponse> {
         return __request(OpenAPI, {
             method: 'DELETE',
             url: '/docker/containers/{container_id}',
             path: {
                 'container_id': containerId,
+            },
+            query: {
+                'delete_database': deleteDatabase,
+                'delete_volumes': deleteVolumes,
             },
             errors: {
                 400: `Bad Request: Container is running or other client-side error.`,

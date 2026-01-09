@@ -56,8 +56,8 @@ export async function restartContainer(containerId: string): Promise<ContainerRe
   return result;
 }
 
-export async function removeContainer(containerId: string): Promise<SuccessResponse> {
-  const result = await DockerService.removeOneContainerDockerContainersContainerIdDelete(containerId);
+export async function removeContainer(containerId: string, deleteDatabase: boolean = false, deleteVolumes: boolean = false): Promise<SuccessResponse> {
+  const result = await DockerService.removeOneContainerDockerContainersContainerIdDelete(containerId, deleteDatabase, deleteVolumes);
   revalidatePath("/docker");
   return result;
 }
