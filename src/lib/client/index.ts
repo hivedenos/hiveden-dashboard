@@ -90,6 +90,7 @@ export { PackageOperation } from './models/PackageOperation';
 export type { PackageStatus } from './models/PackageStatus';
 export type { Partition } from './models/Partition';
 export type { Port } from './models/Port';
+export type { RaidAddDiskRequest } from './models/RaidAddDiskRequest';
 export type { RenameRequest } from './models/RenameRequest';
 export type { SearchRequest } from './models/SearchRequest';
 export type { ShellSessionCreate } from './models/ShellSessionCreate';

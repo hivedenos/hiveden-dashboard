@@ -125,7 +125,11 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
   };
 
   const handleDiskClick = (disk: Disk) => {
-    router.push(`/storage/${disk.name}`);
+    if (disk.raid_group) {
+      router.push(`/storage/raid/${disk.raid_group}`);
+    } else {
+      router.push(`/storage/${disk.name}`);
+    }
   };
 
   const handleOpenShareModal = async () => {

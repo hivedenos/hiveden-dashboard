@@ -14,8 +14,19 @@ import type {
   SuccessResponse
 } from '@/lib/client';
 
+import { revalidatePath } from 'next/cache';
+
 export async function listStorageDevices(): Promise<DiskListResponse> {
   return StorageService.listDevicesStorageDevicesGet();
+}
+
+export async function addDiskToRaid(mdDeviceName: string, devicePath: string, targetRaidLevel?: string): Promise<StorageStrategyApplyResponse> {
+  const result = await StorageService.addDiskToRaidStorageRaidMdDeviceNameAddDiskPost(mdDeviceName, {
+    device_path: devicePath,
+    target_raid_level: targetRaidLevel || null,
+  });
+  revalidatePath(`/storage/raid/${mdDeviceName}`);
+  return result;
 }
 
 export async function mountPartition(data: MountRequest): Promise<SuccessResponse> {
