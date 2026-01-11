@@ -1,9 +1,23 @@
 "use server";
 
 import "@/lib/api"; // Ensure client config
-import type { ContainerConfigResponse, ContainerCreate, ContainerCreateResponse, ContainerResponse, DataResponse, FileUploadResponse, NetworkCreate, SuccessResponse } from "@/lib/client";
-import { DockerService } from "@/lib/client";
+import type { BaseResponse, ContainerConfigResponse, ContainerCreate, ContainerCreateResponse, ContainerResponse, DataResponse, FileUploadResponse, ImageLayerListResponse, ImageListResponse, NetworkCreate, SuccessResponse } from "@/lib/client";
+import { DockerImagesService, DockerService } from "@/lib/client";
 import { revalidatePath } from "next/cache";
+
+export async function listImages(): Promise<ImageListResponse> {
+  return DockerImagesService.listImagesDockerImagesGet();
+}
+
+export async function deleteImage(imageId: string): Promise<BaseResponse> {
+  const result = await DockerImagesService.deleteImageDockerImagesImageIdDelete(imageId);
+  revalidatePath("/docker/images");
+  return result;
+}
+
+export async function getImageLayers(imageId: string): Promise<ImageLayerListResponse> {
+  return DockerImagesService.getImageLayersDockerImagesImageIdLayersGet(imageId);
+}
 
 export async function listContainers(): Promise<DataResponse> {
   return DockerService.listAllContainersDockerContainersGet();

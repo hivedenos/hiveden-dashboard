@@ -1,25 +1,13 @@
 "use client";
 
-import { AppShell, Burger, Group, NavLink, Text, useMantineColorScheme, ActionIcon, Badge } from "@mantine/core";
-import { useDisclosure } from "@mantine/hooks";
-import {
-  IconBrandDocker,
-  IconServer,
-  IconShare,
-  IconInfoCircle,
-  IconSun,
-  IconMoon,
-  IconTemplate,
-  IconFileText,
-  IconPackage,
-  IconDatabase,
-  IconFolder,
-  IconSettings,
-} from "@tabler/icons-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
 import { useApplicationVersion } from "@/lib/useApplicationVersion";
+import { ActionIcon, AppShell, Badge, Burger, Group, ScrollArea, Text, useMantineColorScheme } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import { IconBrandDocker, IconDatabase, IconFileText, IconFolder, IconInfoCircle, IconMoon, IconPackage, IconServer, IconSettings, IconShare, IconSun, IconTemplate } from "@tabler/icons-react";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { LinksGroup } from "./LinksGroup";
+import classes from "./Shell.module.css";
 
 export function Shell({ children }: { children: React.ReactNode }) {
   const [opened, { toggle }] = useDisclosure();
@@ -39,7 +27,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
     { label: "System Info", icon: IconInfoCircle, link: "/" },
     { label: "File Explorer", icon: IconFolder, link: "/files" },
     { label: "Storage", icon: IconDatabase, link: "/storage" },
-    { label: "Docker", icon: IconBrandDocker, link: "/docker" },
+    {
+      label: "Docker",
+      icon: IconBrandDocker,
+      link: "/docker/containers",
+      links: [
+        { label: "Containers", link: "/docker/containers" },
+        { label: "Images", link: "/docker/images" },
+      ],
+    },
     { label: "LXC", icon: IconServer, link: "/lxc" },
     { label: "Network Shares", icon: IconShare, link: "/shares" },
     { label: "Templates", icon: IconTemplate, link: "/templates" },
@@ -86,31 +82,18 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </Group>
       </AppShell.Header>
 
-      <AppShell.Navbar p="md" style={{ display: "flex", flexDirection: "column" }}>
-        <div style={{ flex: 1 }}>
-          {navItems.map((item) => (
-            <NavLink
-              key={item.link}
-              component={Link}
-              href={item.link}
-              label={!isFiles ? item.label : null}
-              leftSection={<item.icon size="1rem" stroke={1.5} />}
-              active={pathname === item.link || (item.link !== "/" && pathname.startsWith(item.link))}
-              variant="light"
-            />
-          ))}
-        </div>
-        <div style={{ borderTop: "1px solid var(--mantine-color-gray-3)", paddingTop: "8px" }}>
+      <AppShell.Navbar className={classes.navbar}>
+        <ScrollArea className={classes.links}>
+          <div className={classes.linksInner}>
+            {navItems.map((item) => (
+              <LinksGroup key={item.label} {...item} isCollapsed={isFiles} />
+            ))}
+          </div>
+        </ScrollArea>
+
+        <div className={classes.footer}>
           {bottomNavItems.map((item) => (
-            <NavLink
-              key={item.link}
-              component={Link}
-              href={item.link}
-              label={!isFiles ? item.label : null}
-              leftSection={<item.icon size="1rem" stroke={1.5} />}
-              active={pathname === item.link || (item.link !== "/" && pathname.startsWith(item.link))}
-              variant="light"
-            />
+            <LinksGroup key={item.label} {...item} isCollapsed={isFiles} />
           ))}
         </div>
       </AppShell.Navbar>
