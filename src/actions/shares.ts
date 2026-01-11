@@ -47,7 +47,7 @@ export async function listAvailableDevices(): Promise<DataResponse> {
   return SharesService.listAvailableDevicesEndpointSharesZfsAvailableDevicesGet();
 }
 
-export async function listSmbShares(): Promise<DataResponse> {
+export async function listSmbShares(): Promise<import('@/lib/client').SMBListResponse> {
   return SharesService.listSmbSharesEndpointSharesSmbGet();
 }
 
@@ -59,6 +59,18 @@ export async function createSmbShare(share: SMBShareCreate): Promise<SuccessResp
 
 export async function deleteSmbShare(name: string): Promise<SuccessResponse> {
   const result = await SharesService.destroySmbShareEndpointSharesSmbNameDelete(name);
+  revalidatePath('/shares');
+  return result;
+}
+
+export async function mountSmbShare(data: import('@/lib/client').MountSMBShareRequest): Promise<SuccessResponse> {
+  const result = await SharesService.mountSmbShareEndpointSharesSmbMountPost(data);
+  revalidatePath('/shares');
+  return result;
+}
+
+export async function unmountSmbShare(mountPoint: string, removePersistence: boolean = false, force: boolean = false): Promise<SuccessResponse> {
+  const result = await SharesService.unmountSmbShareEndpointSharesSmbMountDelete(mountPoint, removePersistence, force);
   revalidatePath('/shares');
   return result;
 }

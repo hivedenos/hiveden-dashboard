@@ -2,10 +2,10 @@
 
 import { Tabs, Text, Box, rem } from '@mantine/core';
 import { SMBList } from './SMBList';
-import type { SMBShare, ZFSPool } from '@/lib/client';
+import type { SMBShare, ZFSPool, SMBMount } from '@/lib/client';
 import { IconShare, IconDatabase } from '@tabler/icons-react';
 
-export function SharesTabs({ smbShares, zfsPools }: { smbShares: SMBShare[], zfsPools: ZFSPool[] }) {
+export function SharesTabs({ smbShares, smbMounts, zfsPools }: { smbShares: SMBShare[], smbMounts: SMBMount[], zfsPools: ZFSPool[] }) {
   const iconStyle = { width: rem(14), height: rem(14) };
 
   return (
@@ -20,8 +20,9 @@ export function SharesTabs({ smbShares, zfsPools }: { smbShares: SMBShare[], zfs
       </Tabs.List>
 
       <Tabs.Panel value="smb">
-        <SMBList shares={smbShares} />
+        <SMBList shares={smbShares} mounts={smbMounts} />
       </Tabs.Panel>
+
 
       <Tabs.Panel value="zfs">
         <Box p="md">
