@@ -37,7 +37,15 @@ export function Shell({ children }: { children: React.ReactNode }) {
       ],
     },
     { label: "LXC", icon: IconServer, link: "/lxc" },
-    { label: "Network Shares", icon: IconShare, link: "/shares" },
+    {
+      label: "Network Shares",
+      icon: IconShare,
+      link: "/shares/smb",
+      links: [
+        { label: "SMB", link: "/shares/smb" },
+        { label: "NFS", link: "/shares/nfs" },
+      ],
+    },
     { label: "Templates", icon: IconTemplate, link: "/templates" },
     { label: "Logs", icon: IconFileText, link: "/logs" },
     { label: "System Config", icon: IconSettings, link: "/system" },
