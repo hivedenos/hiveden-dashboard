@@ -1,12 +1,13 @@
 "use client";
 
-import { Table, Group, Stack, Text, Code, ActionIcon, Tooltip, Pagination, Card } from "@mantine/core";
+import { Table, Group, Stack, Text, Code, ActionIcon, Tooltip, Pagination, Card, Badge } from "@mantine/core";
 import { IconLayersDifference } from "@tabler/icons-react";
 import { useState } from "react";
 import type { DockerImage } from "@/lib/client";
 import { formatBytes } from "@/lib/format";
 import { ImageLayersModal } from "./ImageLayersModal";
 import { DockerImageActions } from "./DockerImageActions";
+import Link from "next/link";
 
 interface DockerImagesListProps {
   images: DockerImage[];
@@ -53,6 +54,28 @@ export function DockerImagesList({ images }: DockerImagesListProps) {
       <Table.Td>
         {new Date(image.created).toLocaleString()}
       </Table.Td>
+      <Table.Td>
+        {image.containers && image.containers.length > 0 ? (
+          <Group gap={4}>
+            {image.containers.map((container) => (
+              <Badge
+                key={container.id}
+                component={Link}
+                href={`/docker/containers/${container.id}`}
+                variant="light"
+                color="blue"
+                style={{ cursor: "pointer" }}
+              >
+                {container.name}
+              </Badge>
+            ))}
+          </Group>
+        ) : (
+          <Text c="dimmed" size="sm">
+            -
+          </Text>
+        )}
+      </Table.Td>
        <Table.Td>
          <Group gap={8}>
             <Tooltip label="View Layers">
@@ -77,6 +100,7 @@ export function DockerImagesList({ images }: DockerImagesListProps) {
                 <Table.Th>Image ID</Table.Th>
                 <Table.Th>Size</Table.Th>
                 <Table.Th>Created</Table.Th>
+                <Table.Th>Containers</Table.Th>
                 <Table.Th>Actions</Table.Th>
             </Table.Tr>
             </Table.Thead>

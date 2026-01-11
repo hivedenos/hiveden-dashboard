@@ -58,6 +58,7 @@ export type { GenericDevice } from './models/GenericDevice';
 export type { HostConfig } from './models/HostConfig';
 export type { HTTPValidationError } from './models/HTTPValidationError';
 export type { HWInfo } from './models/HWInfo';
+export type { ImageContainerInfo } from './models/ImageContainerInfo';
 export type { ImageLayer } from './models/ImageLayer';
 export type { ImageLayerListResponse } from './models/ImageLayerListResponse';
 export type { ImageListResponse } from './models/ImageListResponse';
