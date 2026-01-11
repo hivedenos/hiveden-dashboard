@@ -25,29 +25,40 @@ export function DiskInventory({ disks, onDiskClick }: DiskInventoryProps) {
   return (
     <Stack gap="xl">
       {/* Render RAID Groups */}
-      {raidGroups.map(groupKey => {
-         const groupDisks = groupedDisks[groupKey];
-         const raidLevel = groupDisks[0].raid_level || 'RAID Array';
-         
-         return (
-            <Card key={groupKey} withBorder padding="md" radius="md" bg="var(--mantine-color-gray-0)">
-               <Group mb="md">
-                   <ThemeIcon size="lg" variant="light" color="indigo">
-                       <IconServer size={20} />
-                   </ThemeIcon>
-                   <div>
-                       <Text fw={700}>{raidLevel.toUpperCase()} ({groupKey})</Text>
-                       <Text size="xs" c="dimmed">{groupDisks.length} Member Disks</Text>
-                   </div>
-               </Group>
-               
-               <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
-                  {groupDisks.map(disk => (
-                      <DiskCard key={disk.path} disk={disk} onClick={() => onDiskClick(disk)} />
-                  ))}
-               </SimpleGrid>
-            </Card>
-         );
+      {raidGroups.map((groupKey) => {
+        const groupDisks = groupedDisks[groupKey];
+        const raidLevel = groupDisks[0].raid_level || "RAID Array";
+
+        return (
+          <Card key={groupKey} withBorder padding="md" radius="md" bg="var(--mantine-color-gray-0)">
+            <UnstyledButton
+              onClick={() => onDiskClick(groupDisks[0])}
+              style={{ width: "100%" }}
+              mb="md"
+              className="hover:bg-gray-100 dark:hover:bg-dark-6 rounded-sm p-1 transition-colors"
+            >
+              <Group>
+                <ThemeIcon size="lg" variant="light" color="indigo">
+                  <IconServer size={20} />
+                </ThemeIcon>
+                <div>
+                  <Text fw={700}>
+                    {raidLevel.toUpperCase()} ({groupKey})
+                  </Text>
+                  <Text size="xs" c="dimmed">
+                    {groupDisks.length} Member Disks
+                  </Text>
+                </div>
+              </Group>
+            </UnstyledButton>
+
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+              {groupDisks.map((disk) => (
+                <DiskCard key={disk.path} disk={disk} onClick={() => onDiskClick(disk)} />
+              ))}
+            </SimpleGrid>
+          </Card>
+        );
       })}
 
       {/* Render Ungrouped Disks */}
