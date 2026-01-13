@@ -32,7 +32,7 @@ export async function handleUpdateContainer(containerId: string, formData: Conta
     console.log("Container to submit: ", containerId, payload);
     await updateContainerConfiguration(containerId, payload);
 
-    router.push("/docker");
+    router.push("/docker/containers");
     router.refresh();
   } catch (error) {
     alert(`Failed to update container: ${(error as Error).message}`);

@@ -1,13 +1,13 @@
 "use client";
 
-import { Button, Group, Tooltip, ActionIcon, Modal, Stack, Checkbox, Text } from "@mantine/core";
-import { IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash, IconEdit, IconEye } from "@tabler/icons-react";
-import { useState } from "react";
-import { stopContainer, startContainer, removeContainer, restartContainer } from "@/actions/docker";
-import { useRouter } from "next/navigation";
-import { notifications } from "@mantine/notifications";
+import { removeContainer, restartContainer, startContainer, stopContainer } from "@/actions/docker";
+import { ActionIcon, Button, Checkbox, Group, Modal, Stack, Text, Tooltip } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
+import { notifications } from "@mantine/notifications";
+import { IconEdit, IconEye, IconPlayerPlay, IconPlayerStop, IconRefresh, IconTrash } from "@tabler/icons-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 
 interface ContainerActionsProps {
   containerId: string;
@@ -21,7 +21,7 @@ export function ContainerActions({ containerId, containerState, size }: Containe
   const [deleteVolumes, setDeleteVolumes] = useState(true);
   const [deleteDatabase, setDeleteDatabase] = useState(true);
   const [deleteDns, setDeleteDns] = useState(true);
-  
+
   const router = useRouter();
 
   const handleStart = async () => {
@@ -96,7 +96,7 @@ export function ContainerActions({ containerId, containerState, size }: Containe
         message: "The container has been deleted successfully",
         color: "green",
       });
-      router.push("/docker");
+      router.push("/docker/containers");
     } catch (error) {
       notifications.show({
         title: "Error",
@@ -118,32 +118,21 @@ export function ContainerActions({ containerId, containerState, size }: Containe
 
   const deleteModal = (
     <Modal opened={opened} onClose={close} title="Delete Container">
-        <Stack>
-            <Text size="sm">Are you sure you want to delete this container?</Text>
-            <Checkbox label="Delete Container" checked readOnly description="This action cannot be undone." />
-            <Checkbox 
-                label="Delete App Directory" 
-                checked={deleteVolumes} 
-                onChange={(e) => setDeleteVolumes(e.currentTarget.checked)} 
-                description="Removes persistent data in app directory."
-            />
-            <Checkbox 
-                label="Delete Database" 
-                checked={deleteDatabase} 
-                onChange={(e) => setDeleteDatabase(e.currentTarget.checked)} 
-                description="Removes associated database."
-            />
-            <Checkbox 
-                label="Delete DNS Entry" 
-                checked={deleteDns} 
-                onChange={(e) => setDeleteDns(e.currentTarget.checked)} 
-                description="Removes associated DNS record."
-            />
-            <Group justify="flex-end" mt="md">
-                <Button variant="default" onClick={close}>Cancel</Button>
-                <Button color="red" onClick={confirmDelete} loading={loading === "delete"}>Delete</Button>
-            </Group>
-        </Stack>
+      <Stack>
+        <Text size="sm">Are you sure you want to delete this container?</Text>
+        <Checkbox label="Delete Container" checked readOnly description="This action cannot be undone." />
+        <Checkbox label="Delete App Directory" checked={deleteVolumes} onChange={(e) => setDeleteVolumes(e.currentTarget.checked)} description="Removes persistent data in app directory." />
+        <Checkbox label="Delete Database" checked={deleteDatabase} onChange={(e) => setDeleteDatabase(e.currentTarget.checked)} description="Removes associated database." />
+        <Checkbox label="Delete DNS Entry" checked={deleteDns} onChange={(e) => setDeleteDns(e.currentTarget.checked)} description="Removes associated DNS record." />
+        <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={close}>
+            Cancel
+          </Button>
+          <Button color="red" onClick={confirmDelete} loading={loading === "delete"}>
+            Delete
+          </Button>
+        </Group>
+      </Stack>
     </Modal>
   );
 
@@ -152,49 +141,35 @@ export function ContainerActions({ containerId, containerState, size }: Containe
       <>
         {deleteModal}
         <Group gap="xs">
-            <ActionIcon component={Link} href={`/docker/${containerId}`} variant="light" color="blue" title="View Details">
+          <ActionIcon component={Link} href={`/docker/${containerId}`} variant="light" color="blue" title="View Details">
             <IconEye size={16} />
-            </ActionIcon>
-            
-            <ActionIcon component={Link} href={`/docker/${containerId}/edit`} variant="light" color="cyan" title="Edit">
+          </ActionIcon>
+
+          <ActionIcon component={Link} href={`/docker/${containerId}/edit`} variant="light" color="cyan" title="Edit">
             <IconEdit size={16} />
-            </ActionIcon>
+          </ActionIcon>
 
-            {canStop ? (
+          {canStop ? (
             <ActionIcon variant="light" color="orange" onClick={handleStop} loading={loading === "stop"} title="Stop">
-                <IconPlayerStop size={16} />
+              <IconPlayerStop size={16} />
             </ActionIcon>
-            ) : (
+          ) : (
             <ActionIcon variant="light" color="green" onClick={handleStart} loading={loading === "start"} disabled={!canStart} title="Start">
-                <IconPlayerPlay size={16} />
+              <IconPlayerPlay size={16} />
             </ActionIcon>
-            )}
+          )}
 
-            <ActionIcon 
-            variant="light" 
-            color="blue" 
-            onClick={handleRestart} 
-            loading={loading === "restart"}
-            disabled={!canRestart}
-            title="Restart"
-            >
+          <ActionIcon variant="light" color="blue" onClick={handleRestart} loading={loading === "restart"} disabled={!canRestart} title="Restart">
             <IconRefresh size={16} />
-            </ActionIcon>
+          </ActionIcon>
 
-            <Tooltip label="Container must be stopped to delete" disabled={canDelete} withArrow>
+          <Tooltip label="Container must be stopped to delete" disabled={canDelete} withArrow>
             <div>
-                <ActionIcon
-                variant="light"
-                color="red"
-                onClick={open}
-                loading={loading === "delete"}
-                disabled={!canDelete}
-                title="Delete"
-                >
+              <ActionIcon variant="light" color="red" onClick={open} loading={loading === "delete"} disabled={!canDelete} title="Delete">
                 <IconTrash size={16} />
-                </ActionIcon>
+              </ActionIcon>
             </div>
-            </Tooltip>
+          </Tooltip>
         </Group>
       </>
     );
@@ -202,52 +177,32 @@ export function ContainerActions({ containerId, containerState, size }: Containe
 
   return (
     <>
-        {deleteModal}
-        <Group gap="xs">
-        <Button 
-            component={Link} 
-            href={`/docker/${containerId}/edit`} 
-            variant="light" 
-            color="cyan" 
-            leftSection={<IconEdit size={16} />}
-        >
-            Edit
+      {deleteModal}
+      <Group gap="xs">
+        <Button component={Link} href={`/docker/${containerId}/edit`} variant="light" color="cyan" leftSection={<IconEdit size={16} />}>
+          Edit
         </Button>
 
         {canStop ? (
-            <Button variant="light" color="orange" leftSection={<IconPlayerStop size={16} />} onClick={handleStop} loading={loading === "stop"}>
+          <Button variant="light" color="orange" leftSection={<IconPlayerStop size={16} />} onClick={handleStop} loading={loading === "stop"}>
             Stop
-            </Button>
+          </Button>
         ) : (
-            <Button variant="light" color="green" leftSection={<IconPlayerPlay size={16} />} onClick={handleStart} loading={loading === "start"} disabled={!canStart}>
+          <Button variant="light" color="green" leftSection={<IconPlayerPlay size={16} />} onClick={handleStart} loading={loading === "start"} disabled={!canStart}>
             Start
-            </Button>
+          </Button>
         )}
 
-        <Button 
-            variant="light" 
-            color="blue" 
-            leftSection={<IconRefresh size={16} />} 
-            onClick={handleRestart} 
-            loading={loading === "restart"}
-            disabled={!canRestart}
-        >
-            Restart
+        <Button variant="light" color="blue" leftSection={<IconRefresh size={16} />} onClick={handleRestart} loading={loading === "restart"} disabled={!canRestart}>
+          Restart
         </Button>
 
         <Tooltip label="Container must be stopped to delete" disabled={canDelete} withArrow>
-            <Button
-            variant="light"
-            color="red"
-            leftSection={<IconTrash size={16} />}
-            onClick={open}
-            loading={loading === "delete"}
-            disabled={!canDelete}
-            >
+          <Button variant="light" color="red" leftSection={<IconTrash size={16} />} onClick={open} loading={loading === "delete"} disabled={!canDelete}>
             Delete
-            </Button>
+          </Button>
         </Tooltip>
-        </Group>
+      </Group>
     </>
   );
 }

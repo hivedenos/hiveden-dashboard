@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { Loader, Text, Progress, Stack, Alert, Box, ScrollArea, ThemeIcon, Group, Button, Title } from "@mantine/core";
-import { IconCheck, IconX, IconInfoCircle } from "@tabler/icons-react";
-import { ContainerFormState } from "@/hooks/useContainerForm";
 import { createContainer } from "@/actions/docker";
+import { ContainerFormState } from "@/hooks/useContainerForm";
 import { ContainerCreate } from "@/lib/client";
+import { Alert, Box, Button, Group, Loader, Progress, ScrollArea, Stack, Text, ThemeIcon, Title } from "@mantine/core";
+import { IconCheck, IconInfoCircle, IconX } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 interface CreateDockerContainersProps {
   containers: ContainerFormState[];
@@ -87,7 +87,7 @@ export function CreateDockerContainers({ containers, onComplete }: CreateDockerC
     } else {
       // Default behavior if no onComplete
       setTimeout(() => {
-        router.push("/docker");
+        router.push("/docker/containers");
         router.refresh();
       }, 3500);
     }
@@ -126,7 +126,7 @@ export function CreateDockerContainers({ containers, onComplete }: CreateDockerC
           </Text>
           <Button
             onClick={() => {
-              router.push("/docker");
+              router.push("/docker/containers");
               router.refresh();
             }}
           >
@@ -152,24 +152,7 @@ export function CreateDockerContainers({ containers, onComplete }: CreateDockerC
         <ScrollArea h={300} type="auto" offsetScrollbars>
           <Stack gap="xs">
             {statuses.map((s, idx) => (
-              <Alert
-                key={idx}
-                variant="light"
-                color={s.status === "success" ? "green" : s.status === "error" ? "red" : s.status === "creating" ? "blue" : "gray"}
-                title={s.name}
-                icon={
-                  s.status === "success" ? (
-                    <IconCheck size={16} />
-                  ) : s.status === "error" ? (
-                    <IconX size={16} />
-                  ) : s.status === "creating" ? (
-                    <Loader size={16} />
-                  ) : (
-                    <IconInfoCircle size={16} />
-                  )
-                }
-                styles={{ title: { marginBottom: s.message ? 4 : 0 } }}
-              >
+              <Alert key={idx} variant="light" color={s.status === "success" ? "green" : s.status === "error" ? "red" : s.status === "creating" ? "blue" : "gray"} title={s.name} icon={s.status === "success" ? <IconCheck size={16} /> : s.status === "error" ? <IconX size={16} /> : s.status === "creating" ? <Loader size={16} /> : <IconInfoCircle size={16} />} styles={{ title: { marginBottom: s.message ? 4 : 0 } }}>
                 {s.message}
                 {s.status === "pending" && "Waiting..."}
                 {s.status === "creating" && "Creating..."}

@@ -31,7 +31,7 @@ export async function handleCreateContainer(formData: ContainerFormState, labels
     };
     await createContainer(payload);
 
-    router.push("/docker");
+    router.push("/docker/containers");
     router.refresh();
   } catch (error) {
     alert(`Failed to create container: ${(error as Error).message}`);
