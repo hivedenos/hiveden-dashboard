@@ -10,7 +10,7 @@ Goal: Set up the component structure and integrate with the `MetricsService`.
     - [ ] Implement Feature: Create `src/hooks/useSystemMetrics.ts`.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Data Fetching' (Protocol in workflow.md)
 
-## Phase 2: UI Implementation
+## Phase 2: UI Implementation [checkpoint: f76ea8c]
 Goal: Build the individual metric components for CPU, RAM, and Disk.
 
 - [x] Task: Implement `CPUMetric` component. [139ae7e]
