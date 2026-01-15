@@ -27,8 +27,8 @@ Goal: Build the individual metric components for CPU, RAM, and Disk.
 ## Phase 3: Integration & Polish
 Goal: Assemble the grid on the landing page and refine the UX.
 
-- [ ] Task: Create `SystemMetricsGrid.tsx` to arrange the widgets.
-- [ ] Task: Integrate `SystemMetricsGrid` into `src/app/page.tsx`.
+- [x] Task: Create `SystemMetricsGrid.tsx` to arrange the widgets. [1e75839]
+- [~] Task: Integrate `SystemMetricsGrid` into `src/app/page.tsx`.
 - [ ] Task: Add loading skeletons and error states to all widgets.
 - [ ] Task: Final responsive design check and mobile interaction polish.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Integration & Polish' (Protocol in workflow.md)
