@@ -24,7 +24,7 @@ Goal: Build the individual metric components for CPU, RAM, and Disk.
     - [x] Implement Feature: Create `src/components/Dashboard/Widgets/metrics/DiskMetric.tsx`.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: UI Implementation' (Protocol in workflow.md)
 
-## Phase 3: Integration & Polish
+## Phase 3: Integration & Polish [checkpoint: 2377990]
 Goal: Assemble the grid on the landing page and refine the UX.
 
 - [x] Task: Create `SystemMetricsGrid.tsx` to arrange the widgets. [1e75839]
