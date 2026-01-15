@@ -1,7 +1,16 @@
-import { Title, Text, Button, Group } from "@mantine/core";
+import { Title, Button, Group } from "@mantine/core";
 import Link from "next/link";
+import { BackupList } from "@/components/Backups/BackupList";
+import { listBackups, listBackupSchedules } from "@/actions/backups";
 
-export default function BackupsPage() {
+export const dynamic = 'force-dynamic';
+
+export default async function BackupsPage() {
+  const [backups, schedules] = await Promise.all([
+    listBackups(),
+    listBackupSchedules()
+  ]);
+
   return (
     <div>
       <Group justify="space-between" mb="lg">
@@ -10,7 +19,7 @@ export default function BackupsPage() {
           Create Backup
         </Button>
       </Group>
-      <Text>Backup list will be here.</Text>
+      <BackupList schedules={schedules} backups={backups} />
     </div>
   );
 }
