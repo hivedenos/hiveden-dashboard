@@ -32,7 +32,7 @@ Goal: Implement the creation flow with Cron builder and validation.
     - [ ] Logic: Ensure existing backups are replaced/handled according to the spec.
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Backup Creation & Form Logic' (Protocol in workflow.md)
 
-## Phase 4: Editing & Actions
+## Phase 4: Editing & Actions [checkpoint: 2f9901a]
 Goal: Enable editing of schedules and immediate execution.
 
 - [x] Task: Implement "Edit" functionality in `BackupForm`. [2a12529]
