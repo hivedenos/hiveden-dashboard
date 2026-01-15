@@ -10,7 +10,7 @@ Goal: Establish the routing, navigation, and basic page structures.
 - [x] Task: Implement basic page skeletons for the Backups List and Create/Edit forms. [6c08133]
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Navigation' (Protocol in workflow.md)
 
-## Phase 2: Backups List & Data Fetching
+## Phase 2: Backups List & Data Fetching [checkpoint: d452550]
 Goal: Display existing backups with all required metadata.
 
 - [x] Task: Create a `BackupList` component using Mantine `Table`. [43a9f37]
