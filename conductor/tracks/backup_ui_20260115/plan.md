@@ -19,7 +19,7 @@ Goal: Display existing backups with all required metadata.
 - [x] Task: Implement Status indicators (Badges) and data formatting (Bytes/Date). [7cabbc4]
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Backups List & Data Fetching' (Protocol in workflow.md)
 
-## Phase 3: Backup Creation & Form Logic
+## Phase 3: Backup Creation & Form Logic [checkpoint: df4c31d]
 Goal: Implement the creation flow with Cron builder and validation.
 
 - [x] Task: Develop a `CronHelper` component or utility for building/validating cron strings. [5ff97f6]
