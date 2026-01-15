@@ -16,12 +16,12 @@ Goal: Build the individual metric components for CPU, RAM, and Disk.
 - [x] Task: Implement `CPUMetric` component. [139ae7e]
     - [x] Write Tests: Create `src/components/Dashboard/Widgets/metrics/CPUMetric.test.tsx` to verify rendering with various load levels.
     - [x] Implement Feature: Create `src/components/Dashboard/Widgets/metrics/CPUMetric.tsx` using `recharts` for a small sparkline.
-- [~] Task: Implement `MemoryMetric` component.
-    - [ ] Write Tests: Create `src/components/Dashboard/Widgets/metrics/MemoryMetric.test.tsx`.
-    - [ ] Implement Feature: Create `src/components/Dashboard/Widgets/metrics/MemoryMetric.tsx`.
-- [ ] Task: Implement `DiskMetric` component.
-    - [ ] Write Tests: Create `src/components/Dashboard/Widgets/metrics/DiskMetric.test.tsx`.
-    - [ ] Implement Feature: Create `src/components/Dashboard/Widgets/metrics/DiskMetric.tsx`.
+- [x] Task: Implement `MemoryMetric` component. [4eb208b]
+    - [x] Write Tests: Create `src/components/Dashboard/Widgets/metrics/MemoryMetric.test.tsx`.
+    - [x] Implement Feature: Create `src/components/Dashboard/Widgets/metrics/MemoryMetric.tsx`.
+- [x] Task: Implement `DiskMetric` component. [c6fa880]
+    - [x] Write Tests: Create `src/components/Dashboard/Widgets/metrics/DiskMetric.test.tsx`.
+    - [x] Implement Feature: Create `src/components/Dashboard/Widgets/metrics/DiskMetric.tsx`.
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: UI Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Integration & Polish
