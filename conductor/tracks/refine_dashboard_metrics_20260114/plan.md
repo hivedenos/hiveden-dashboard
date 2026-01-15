@@ -1,6 +1,6 @@
 # Implementation Plan: Refine Dashboard Metrics Widgets
 
-## Phase 1: Foundation & Data Fetching
+## Phase 1: Foundation & Data Fetching [checkpoint: 6a5750b]
 Goal: Set up the component structure and integrate with the `MetricsService`.
 
 - [x] Task: Create directory structure for metrics widgets in `src/components/Dashboard/Widgets/metrics/` [94a2116]
