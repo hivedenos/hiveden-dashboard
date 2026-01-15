@@ -3,7 +3,7 @@
 import { useApplicationVersion } from "@/lib/useApplicationVersion";
 import { ActionIcon, AppShell, Badge, Burger, Group, ScrollArea, Text, useMantineColorScheme } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconBrandDocker, IconDatabase, IconFileText, IconFolder, IconInfoCircle, IconMoon, IconPackage, IconServer, IconSettings, IconShare, IconSun, IconTemplate } from "@tabler/icons-react";
+import { IconBrandDocker, IconDatabase, IconDeviceFloppy, IconFileText, IconFolder, IconInfoCircle, IconMoon, IconPackage, IconServer, IconSettings, IconShare, IconSun, IconTemplate } from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LinksGroup } from "./LinksGroup";
@@ -47,6 +47,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       ],
     },
     { label: "Templates", icon: IconTemplate, link: "/templates" },
+    { label: "Backups", icon: IconDeviceFloppy, link: "/backups" },
     { label: "Logs", icon: IconFileText, link: "/logs" },
     { label: "System Config", icon: IconSettings, link: "/system" },
   ];
