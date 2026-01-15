@@ -35,7 +35,7 @@ Goal: Implement the creation flow with Cron builder and validation.
 ## Phase 4: Editing & Actions
 Goal: Enable editing of schedules and immediate execution.
 
-- [ ] Task: Implement "Edit" functionality in `BackupForm`.
+- [x] Task: Implement "Edit" functionality in `BackupForm`. [2a12529]
     - [ ] Logic: Restrict editing to only the crontab field.
 - [ ] Task: Implement "Run Now" action.
     - [ ] Implement Feature: Add action button to the list and form.
