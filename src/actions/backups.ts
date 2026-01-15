@@ -29,3 +29,9 @@ export async function createBackup(data: any) {
     await BackupsService.createBackupBackupsPost(data);
     revalidatePath('/backups');
 }
+
+export async function updateBackupSchedule(oldId: string, data: any) {
+  // Since there is no update endpoint, we delete and recreate.
+  await BackupsService.deleteScheduleBackupsSchedulesScheduleIdDelete(oldId);
+  return BackupsService.createScheduleBackupsSchedulesPost(data);
+}
