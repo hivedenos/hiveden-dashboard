@@ -16,7 +16,7 @@ Goal: Display existing backups with all required metadata.
 - [x] Task: Create a `BackupList` component using Mantine `Table`. [43a9f37]
     - [ ] Write Tests: Mock API responses and verify the table renders columns for Status, Size, Type, and Actions.
     - [ ] Implement Feature: Create `src/components/Backups/BackupList.tsx` and integrate with the backup service.
-- [ ] Task: Implement Status indicators (Badges) and data formatting (Bytes/Date).
+- [x] Task: Implement Status indicators (Badges) and data formatting (Bytes/Date). [7cabbc4]
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Backups List & Data Fetching' (Protocol in workflow.md)
 
 ## Phase 3: Backup Creation & Form Logic
