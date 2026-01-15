@@ -1,6 +1,6 @@
 # Implementation Plan: Backup Configuration UI
 
-## Phase 1: Foundation & Navigation
+## Phase 1: Foundation & Navigation [checkpoint: 4dca679]
 Goal: Establish the routing, navigation, and basic page structures.
 
 - [x] Task: Create directory structure for backups in `src/app/backups/`. [4f24001]
