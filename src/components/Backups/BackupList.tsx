@@ -6,6 +6,8 @@ import { formatBytes } from "@/lib/format";
 import Link from "next/link";
 import { Backup } from "@/lib/client/models/Backup";
 import { BackupSchedule } from "@/lib/client/models/BackupSchedule";
+import { createBackup, deleteBackupSchedule } from "@/actions/backups";
+import { notifications } from "@mantine/notifications";
 
 interface BackupListProps {
   schedules: BackupSchedule[];
@@ -13,6 +15,25 @@ interface BackupListProps {
 }
 
 export function BackupList({ schedules, backups }: BackupListProps) {
+  const handleRunNow = async (schedule: BackupSchedule) => {
+    try {
+      await createBackup({ type: schedule.type, target: schedule.target });
+      notifications.show({ title: 'Success', message: 'Backup started', color: 'green' });
+    } catch (e: any) {
+      notifications.show({ title: 'Error', message: e.message || 'Failed to start backup', color: 'red' });
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this schedule?")) return;
+    try {
+      await deleteBackupSchedule(id);
+      notifications.show({ title: 'Success', message: 'Schedule deleted', color: 'green' });
+    } catch (e: any) {
+      notifications.show({ title: 'Error', message: e.message || 'Failed to delete schedule', color: 'red' });
+    }
+  };
+
   return (
     <Stack gap="xl">
       <Card withBorder padding="lg" radius="md">
@@ -41,10 +62,10 @@ export function BackupList({ schedules, backups }: BackupListProps) {
                     <ActionIcon component={Link} href={`/backups/${schedule.id}/edit`} variant="subtle" color="blue">
                       <IconEdit size={16} />
                     </ActionIcon>
-                    <ActionIcon variant="subtle" color="red">
+                    <ActionIcon variant="subtle" color="red" onClick={() => schedule.id && handleDelete(schedule.id)}>
                       <IconTrash size={16} />
                     </ActionIcon>
-                    <ActionIcon variant="subtle" color="green">
+                    <ActionIcon variant="subtle" color="green" onClick={() => handleRunNow(schedule)}>
                       <IconPlayerPlay size={16} />
                     </ActionIcon>
                   </Group>
