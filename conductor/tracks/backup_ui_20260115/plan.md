@@ -4,7 +4,7 @@
 Goal: Establish the routing, navigation, and basic page structures.
 
 - [x] Task: Create directory structure for backups in `src/app/backups/`. [4f24001]
-- [ ] Task: Add "Backups" link to the main navigation sidebar.
+- [x] Task: Add "Backups" link to the main navigation sidebar. [d5d6566]
     - [ ] Write Tests: Verify the link exists and points to `/backups`.
     - [ ] Implement Feature: Update `src/components/Layout/Shell.tsx` (or equivalent) to include the navigation item.
 - [ ] Task: Implement basic page skeletons for the Backups List and Create/Edit forms.
