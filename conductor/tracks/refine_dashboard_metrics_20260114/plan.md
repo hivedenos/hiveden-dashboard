@@ -13,10 +13,10 @@ Goal: Set up the component structure and integrate with the `MetricsService`.
 ## Phase 2: UI Implementation
 Goal: Build the individual metric components for CPU, RAM, and Disk.
 
-- [~] Task: Implement `CPUMetric` component.
-    - [ ] Write Tests: Create `src/components/Dashboard/Widgets/metrics/CPUMetric.test.tsx` to verify rendering with various load levels.
-    - [ ] Implement Feature: Create `src/components/Dashboard/Widgets/metrics/CPUMetric.tsx` using `recharts` for a small sparkline.
-- [ ] Task: Implement `MemoryMetric` component.
+- [x] Task: Implement `CPUMetric` component. [139ae7e]
+    - [x] Write Tests: Create `src/components/Dashboard/Widgets/metrics/CPUMetric.test.tsx` to verify rendering with various load levels.
+    - [x] Implement Feature: Create `src/components/Dashboard/Widgets/metrics/CPUMetric.tsx` using `recharts` for a small sparkline.
+- [~] Task: Implement `MemoryMetric` component.
     - [ ] Write Tests: Create `src/components/Dashboard/Widgets/metrics/MemoryMetric.test.tsx`.
     - [ ] Implement Feature: Create `src/components/Dashboard/Widgets/metrics/MemoryMetric.tsx`.
 - [ ] Task: Implement `DiskMetric` component.
