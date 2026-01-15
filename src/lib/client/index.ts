@@ -7,6 +7,11 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export type { Backup } from './models/Backup';
+export type { BackupConfig } from './models/BackupConfig';
+export type { BackupCreateRequest } from './models/BackupCreateRequest';
+export type { BackupRestoreRequest } from './models/BackupRestoreRequest';
+export type { BackupSchedule } from './models/BackupSchedule';
 export type { BaseResponse } from './models/BaseResponse';
 export type { Body_upload_container_file_docker_containers__container_name__files_post } from './models/Body_upload_container_file_docker_containers__container_name__files_post';
 export type { BtrfsShare } from './models/BtrfsShare';
@@ -121,6 +126,7 @@ export type { ZFSDatasetCreate } from './models/ZFSDatasetCreate';
 export type { ZFSPool } from './models/ZFSPool';
 export type { ZFSPoolCreate } from './models/ZFSPoolCreate';
 
+export { BackupsService } from './services/BackupsService';
 export { ConfigService } from './services/ConfigService';
 export { DatabaseService } from './services/DatabaseService';
 export { DockerService } from './services/DockerService';
