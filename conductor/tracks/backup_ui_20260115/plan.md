@@ -25,7 +25,7 @@ Goal: Implement the creation flow with Cron builder and validation.
 - [x] Task: Develop a `CronHelper` component or utility for building/validating cron strings. [5ff97f6]
     - [ ] Write Tests: Verify regex validation and common schedule presets.
     - [ ] Implement Feature: Create `src/components/Backups/CronHelper.tsx`.
-- [ ] Task: Build the `BackupForm` component.
+- [x] Task: Build the `BackupForm` component. [57d6c6e]
     - [ ] Write Tests: Ensure "Database" vs "Application" selection and Crontab validation work as expected.
     - [ ] Implement Feature: Create `src/components/Backups/BackupForm.tsx`.
 - [ ] Task: Implement the "Create" logic (Submit to API).
