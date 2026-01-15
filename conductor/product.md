@@ -11,7 +11,7 @@ Hiveden Dashboard is a comprehensive web-based management interface for a home s
 ## Core Features
 - **Docker Management:** Full container lifecycle (create, start, stop, delete), image management, and real-time log viewing.
 - **Storage Management:** Advanced ZFS/Btrfs pool and dataset management, disk inventory, and RAID configuration wizards.
-- **System Administration:** Systemd service management, integrated file explorer, web-based terminal access, and detailed resource monitoring with real-time CPU, RAM, and Disk dashboards.
+- **System Administration:** Systemd service management, integrated file explorer, web-based terminal access, detailed resource monitoring with real-time CPU, RAM, and Disk dashboards, and automated backup scheduling.
 - **Networking:** Comprehensive DNS configuration, domain settings, and network interface management.
 - **Sharing:** SMB/NFS share management and remote share mount configuration.
 
