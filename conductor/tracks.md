@@ -9,5 +9,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ---
 
-- [~] **Track: Add support for the backup configuration UI. Includes list view, creation with crontab helper, and editing of schedules.**
+- [x] **Track: Add support for the backup configuration UI. Includes list view, creation with crontab helper, and editing of schedules.**
 *Link: [./tracks/backup_ui_20260115/](./tracks/backup_ui_20260115/)*
