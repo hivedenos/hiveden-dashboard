@@ -22,7 +22,7 @@ Goal: Display existing backups with all required metadata.
 ## Phase 3: Backup Creation & Form Logic
 Goal: Implement the creation flow with Cron builder and validation.
 
-- [ ] Task: Develop a `CronHelper` component or utility for building/validating cron strings.
+- [x] Task: Develop a `CronHelper` component or utility for building/validating cron strings. [5ff97f6]
     - [ ] Write Tests: Verify regex validation and common schedule presets.
     - [ ] Implement Feature: Create `src/components/Backups/CronHelper.tsx`.
 - [ ] Task: Build the `BackupForm` component.
