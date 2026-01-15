@@ -7,7 +7,7 @@ Goal: Establish the routing, navigation, and basic page structures.
 - [x] Task: Add "Backups" link to the main navigation sidebar. [d5d6566]
     - [ ] Write Tests: Verify the link exists and points to `/backups`.
     - [ ] Implement Feature: Update `src/components/Layout/Shell.tsx` (or equivalent) to include the navigation item.
-- [ ] Task: Implement basic page skeletons for the Backups List and Create/Edit forms.
+- [x] Task: Implement basic page skeletons for the Backups List and Create/Edit forms. [6c08133]
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Navigation' (Protocol in workflow.md)
 
 ## Phase 2: Backups List & Data Fetching
