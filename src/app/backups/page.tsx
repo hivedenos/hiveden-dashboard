@@ -1,15 +1,12 @@
-import { Title, Button, Group } from "@mantine/core";
-import Link from "next/link";
-import { BackupList } from "@/components/Backups/BackupList";
 import { listBackups, listBackupSchedules } from "@/actions/backups";
+import { BackupList } from "@/components/Backups/BackupList";
+import { Button, Group, Title } from "@mantine/core";
+import Link from "next/link";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 export default async function BackupsPage() {
-  const [backups, schedules] = await Promise.all([
-    listBackups(),
-    listBackupSchedules()
-  ]);
+  const [backups, schedules] = await Promise.all([listBackups(), listBackupSchedules()]);
 
   return (
     <div>
