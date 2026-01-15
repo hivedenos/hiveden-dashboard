@@ -5,7 +5,7 @@ Goal: Set up the component structure and integrate with the `MetricsService`.
 
 - [x] Task: Create directory structure for metrics widgets in `src/components/Dashboard/Widgets/metrics/` [94a2116]
 - [x] Task: Create a base MetricCard wrapper component following Mantine/Material design. [0b67378]
-- [ ] Task: Implement a custom hook `useSystemMetrics` for polling `MetricsService.getSystemMetricsMetricsGet`.
+- [x] Task: Implement a custom hook `useSystemMetrics` for polling `MetricsService.getSystemMetricsMetricsGet`. [4615ed7]
     - [ ] Write Tests: Create `src/hooks/useSystemMetrics.test.ts` to mock the service and verify polling/data mapping.
     - [ ] Implement Feature: Create `src/hooks/useSystemMetrics.ts`.
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation & Data Fetching' (Protocol in workflow.md)
