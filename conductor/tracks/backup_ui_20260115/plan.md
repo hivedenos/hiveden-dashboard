@@ -37,7 +37,7 @@ Goal: Enable editing of schedules and immediate execution.
 
 - [x] Task: Implement "Edit" functionality in `BackupForm`. [2a12529]
     - [ ] Logic: Restrict editing to only the crontab field.
-- [ ] Task: Implement "Run Now" action.
+- [~] Task: Implement "Run Now" action.
     - [ ] Implement Feature: Add action button to the list and form.
 - [ ] Task: Implement "Delete" configuration action.
 - [ ] Task: Conductor - User Manual Verification 'Phase 4: Editing & Actions' (Protocol in workflow.md)
