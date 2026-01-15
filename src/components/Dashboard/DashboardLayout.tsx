@@ -58,6 +58,7 @@ export function DashboardLayout({ initialData }: DashboardLayoutProps) {
       lg: [
         { i: 'sys-info-1', x: 0, y: 0, w: 1, h: 1, type: 'neofetch' },
         { i: 'storage-1', x: 1, y: 0, w: 1, h: 1, type: 'storage_locations' },
+        { i: 'metrics-1', x: 0, y: 1, w: 2, h: 1, type: 'system_metrics' },
       ],
     },
   });
@@ -128,6 +129,7 @@ export function DashboardLayout({ initialData }: DashboardLayoutProps) {
         lg: [
             { i: 'sys-info-1', x: 0, y: 0, w: 1, h: 1, type: 'neofetch' },
             { i: 'storage-1', x: 1, y: 0, w: 1, h: 1, type: 'storage_locations' },
+            { i: 'metrics-1', x: 0, y: 1, w: 2, h: 1, type: 'system_metrics' },
         ]
     });
     setCols(2);

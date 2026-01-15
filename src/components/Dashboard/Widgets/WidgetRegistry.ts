@@ -1,11 +1,12 @@
 import type { FilesystemLocation, HWInfo, OSInfo, VersionInfo } from "@/lib/client";
 import { NeoFetch } from "../NeoFetch";
 import { StorageLocations } from "../StorageLocations";
+import { SystemMetricsGrid } from "./metrics/SystemMetricsGrid";
 import { RingWidget } from "./metrics/RingWidget";
 import { SparklineWidget } from "./metrics/SparklineWidget";
 import { StatWidget } from "./metrics/StatWidget";
 
-export type WidgetType = "neofetch" | "storage_locations" | "ring_widget" | "sparkline_widget" | "stat_widget";
+export type WidgetType = "neofetch" | "storage_locations" | "system_metrics" | "ring_widget" | "sparkline_widget" | "stat_widget";
 
 export interface WidgetData {
   osInfo?: OSInfo;
@@ -17,6 +18,7 @@ export interface WidgetData {
 export const WidgetRegistry: Record<string, React.FC<any>> = {
   neofetch: NeoFetch,
   storage_locations: StorageLocations,
+  system_metrics: SystemMetricsGrid,
   ring_widget: RingWidget,
   sparkline_widget: SparklineWidget,
   stat_widget: StatWidget,
@@ -40,6 +42,15 @@ export const AvailableWidgets = [
     minW: 1,
     minH: 1,
     type: "storage_locations",
+  },
+  {
+    id: "system_metrics",
+    label: "System Metrics (CPU/RAM/Disk)",
+    defaultW: 2,
+    defaultH: 1,
+    minW: 1,
+    minH: 1,
+    type: "system_metrics",
   },
   // Generic Metric Widgets
   {
