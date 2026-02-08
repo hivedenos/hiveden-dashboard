@@ -1,7 +1,7 @@
 import { listBackups, listBackupSchedules } from "@/actions/backups";
 import { BackupList } from "@/components/Backups/BackupList";
-import { Button, Group, Title } from "@mantine/core";
-import Link from "next/link";
+import { CreateBackupButton } from "@/components/Backups/CreateBackupButton";
+import { Group, Title } from "@mantine/core";
 
 export const dynamic = "force-dynamic";
 
@@ -12,9 +12,7 @@ export default async function BackupsPage() {
     <div>
       <Group justify="space-between" mb="lg">
         <Title order={2}>Backups</Title>
-        <Button component={Link} href="/backups/new">
-          Create Backup
-        </Button>
+        <CreateBackupButton />
       </Group>
       <BackupList schedules={schedules} backups={backups} />
     </div>

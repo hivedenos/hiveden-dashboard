@@ -152,4 +152,24 @@ export class BackupsService {
             },
         });
     }
+    /**
+     * Delete Backup
+     * @param filename
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static deleteBackupBackupsFilenameDelete(
+        filename: string,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/backups/{filename}',
+            path: {
+                'filename': filename,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
 }

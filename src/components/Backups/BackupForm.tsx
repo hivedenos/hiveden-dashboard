@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Select, TextInput, Stack, Group, Paper } from "@mantine/core";
+import { Button, Select, TextInput, Stack, Group, Paper, Autocomplete } from "@mantine/core";
 import { useForm } from "@mantine/form";
 import { CronHelper, isValidCron } from "./CronHelper";
 import { BackupSchedule } from "@/lib/client/models/BackupSchedule";
@@ -9,9 +9,10 @@ interface BackupFormProps {
   initialData?: BackupSchedule;
   onSubmit: (values: any) => void;
   isEditing?: boolean;
+  databases?: string[];
 }
 
-export function BackupForm({ initialData, onSubmit, isEditing }: BackupFormProps) {
+export function BackupForm({ initialData, onSubmit, isEditing, databases = [] }: BackupFormProps) {
   const form = useForm({
     initialValues: {
       type: initialData?.type || "database",
@@ -24,6 +25,8 @@ export function BackupForm({ initialData, onSubmit, isEditing }: BackupFormProps
       cron: (value) => (isValidCron(value) ? null : "Invalid cron expression"),
     },
   });
+
+  const autocompleteData = form.values.type === "database" ? databases : [];
 
   return (
     <Paper withBorder p="lg" radius="md">
@@ -39,9 +42,10 @@ export function BackupForm({ initialData, onSubmit, isEditing }: BackupFormProps
             disabled={isEditing}
           />
 
-          <TextInput
+          <Autocomplete
             label="Target"
             placeholder="e.g. postgres, /opt/app"
+            data={autocompleteData}
             {...form.getInputProps("target")}
             disabled={isEditing}
           />

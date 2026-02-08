@@ -1,0 +1,9 @@
+.link[data-active] {
+  background-color: transparent;
+  color: var(--mantine-primary-color-filled);
+  font-weight: 500;
+}
+
+.link[data-active]:hover {
+  background-color: var(--mantine-color-gray-0);
+}

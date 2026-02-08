@@ -5,6 +5,7 @@ import { Group, Box, Collapse, ThemeIcon, Text, UnstyledButton, rem, NavLink } f
 import { IconChevronRight } from '@tabler/icons-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import classes from './LinksGroup.module.css';
 
 interface LinksGroupProps {
   icon: React.FC<any>;
@@ -25,19 +26,6 @@ export function LinksGroup({ icon: Icon, label, link, initiallyOpened, links, is
   
   const [opened, setOpened] = useState(initiallyOpened || isChildActive);
 
-  const activeStyles = {
-    root: {
-        '&[data-active]': {
-            backgroundColor: 'transparent',
-            color: 'var(--mantine-primary-color-filled)',
-            fontWeight: 500,
-            '&:hover': {
-                backgroundColor: 'var(--mantine-color-gray-0)',
-            },
-        },
-    },
-  };
-
   // If collapsed (File explorer mode), we show a simpler view
   if (isCollapsed) {
       return (
@@ -48,7 +36,7 @@ export function LinksGroup({ icon: Icon, label, link, initiallyOpened, links, is
             leftSection={<Icon size="1rem" stroke={1.5} />}
             active={isActive || isChildActive}
             variant="transparent" // Changed from light to transparent
-            styles={activeStyles}
+            className={classes.link}
         />
       );
   }
@@ -63,7 +51,7 @@ export function LinksGroup({ icon: Icon, label, link, initiallyOpened, links, is
             leftSection={<Icon size="1rem" stroke={1.5} />}
             active={isActive}
             variant="transparent" // Changed from light to transparent
-            styles={activeStyles}
+            className={classes.link}
         />
       );
   }
@@ -78,7 +66,7 @@ export function LinksGroup({ icon: Icon, label, link, initiallyOpened, links, is
         active={isChildActive}
         variant="transparent" // Changed from light to transparent
         onChange={setOpened}
-        styles={activeStyles}
+        className={classes.link}
     >
         <Box 
             style={{ 
@@ -95,7 +83,7 @@ export function LinksGroup({ icon: Icon, label, link, initiallyOpened, links, is
                     label={item.label}
                     active={pathname === item.link}
                     variant="transparent" // Changed from light to transparent
-                    styles={activeStyles}
+                    className={classes.link}
                 />
             ))}
         </Box>

@@ -1,5 +1,6 @@
 'use server';
 
+import '@/lib/api';
 import { BackupsService } from "@/lib/client";
 import { revalidatePath } from "next/cache";
 
@@ -34,4 +35,9 @@ export async function updateBackupSchedule(oldId: string, data: any) {
   // Since there is no update endpoint, we delete and recreate.
   await BackupsService.deleteScheduleBackupsSchedulesScheduleIdDelete(oldId);
   return BackupsService.createScheduleBackupsSchedulesPost(data);
+}
+
+export async function deleteBackup(filename: string) {
+  await BackupsService.deleteBackupBackupsFilenameDelete(filename);
+  revalidatePath('/backups');
 }

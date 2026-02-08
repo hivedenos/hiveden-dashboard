@@ -6,7 +6,7 @@ import { formatBytes } from "@/lib/format";
 import Link from "next/link";
 import { Backup } from "@/lib/client/models/Backup";
 import { BackupSchedule } from "@/lib/client/models/BackupSchedule";
-import { createBackup, deleteBackupSchedule } from "@/actions/backups";
+import { createBackup, deleteBackupSchedule, deleteBackup } from "@/actions/backups";
 import { notifications } from "@mantine/notifications";
 
 interface BackupListProps {
@@ -31,6 +31,16 @@ export function BackupList({ schedules, backups }: BackupListProps) {
       notifications.show({ title: 'Success', message: 'Schedule deleted', color: 'green' });
     } catch (e: any) {
       notifications.show({ title: 'Error', message: e.message || 'Failed to delete schedule', color: 'red' });
+    }
+  };
+
+  const handleDeleteBackup = async (filename: string) => {
+    if (!confirm(`Are you sure you want to delete backup ${filename}?`)) return;
+    try {
+      await deleteBackup(filename);
+      notifications.show({ title: 'Success', message: 'Backup deleted', color: 'green' });
+    } catch (e: any) {
+      notifications.show({ title: 'Error', message: e.message || 'Failed to delete backup', color: 'red' });
     }
   };
 
@@ -91,6 +101,7 @@ export function BackupList({ schedules, backups }: BackupListProps) {
               <Table.Th>Date</Table.Th>
               <Table.Th>Size</Table.Th>
               <Table.Th>File</Table.Th>
+              <Table.Th>Actions</Table.Th>
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -105,11 +116,16 @@ export function BackupList({ schedules, backups }: BackupListProps) {
                 <Table.Td>{new Date(backup.timestamp).toLocaleString()}</Table.Td>
                 <Table.Td>{formatBytes(backup.size)}</Table.Td>
                 <Table.Td>{backup.filename}</Table.Td>
+                <Table.Td>
+                  <ActionIcon variant="subtle" color="red" onClick={() => handleDeleteBackup(backup.filename)}>
+                    <IconTrash size={16} />
+                  </ActionIcon>
+                </Table.Td>
               </Table.Tr>
             ))}
             {backups.length === 0 && (
               <Table.Tr>
-                <Table.Td colSpan={5} align="center">No backups found</Table.Td>
+                <Table.Td colSpan={6} align="center">No backups found</Table.Td>
               </Table.Tr>
             )}
           </Table.Tbody>
