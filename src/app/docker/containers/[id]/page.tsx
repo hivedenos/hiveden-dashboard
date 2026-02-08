@@ -22,7 +22,7 @@ export default async function ContainerDetailPage({ params }: { params: Promise<
   return (
     <Container fluid>
       <Group mb="lg">
-        <Link href="/docker" style={{ textDecoration: "none", color: "inherit" }}>
+        <Link href="/docker/containers" style={{ textDecoration: "none", color: "inherit" }}>
           <Group gap="xs" style={{ cursor: "pointer" }}>
             <IconArrowLeft size={20} />
             <Text>Back to Containers</Text>

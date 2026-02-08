@@ -142,7 +142,7 @@ export function DNSSettings() {
                data.container_id ? (
                  <ActionIcon 
                    component={Link} 
-                   href={`/docker/${data.container_id}`}
+                   href={`/docker/containers/${data.container_id}`}
                    variant="subtle" 
                    color="blue"
                    title="View Container"

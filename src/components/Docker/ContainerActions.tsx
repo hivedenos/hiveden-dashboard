@@ -141,11 +141,11 @@ export function ContainerActions({ containerId, containerState, size }: Containe
       <>
         {deleteModal}
         <Group gap="xs">
-          <ActionIcon component={Link} href={`/docker/${containerId}`} variant="light" color="blue" title="View Details">
+          <ActionIcon component={Link} href={`/docker/containers/${containerId}`} variant="light" color="blue" title="View Details">
             <IconEye size={16} />
           </ActionIcon>
 
-          <ActionIcon component={Link} href={`/docker/${containerId}/edit`} variant="light" color="cyan" title="Edit">
+          <ActionIcon component={Link} href={`/docker/containers/${containerId}/edit`} variant="light" color="cyan" title="Edit">
             <IconEdit size={16} />
           </ActionIcon>
 
@@ -179,7 +179,7 @@ export function ContainerActions({ containerId, containerState, size }: Containe
     <>
       {deleteModal}
       <Group gap="xs">
-        <Button component={Link} href={`/docker/${containerId}/edit`} variant="light" color="cyan" leftSection={<IconEdit size={16} />}>
+        <Button component={Link} href={`/docker/containers/${containerId}/edit`} variant="light" color="cyan" leftSection={<IconEdit size={16} />}>
           Edit
         </Button>
 

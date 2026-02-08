@@ -20,7 +20,7 @@ export async function listUsers(): Promise<DatabaseUserListResponse> {
 
 export async function createDatabase(db: DatabaseCreateRequest): Promise<SuccessResponse> {
   const response = await DatabaseService.createDatabaseDbDatabasesPost(db);
-  revalidatePath('/docker'); 
+  revalidatePath('/docker/containers'); 
   revalidatePath('/system');
   return response;
 }

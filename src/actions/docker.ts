@@ -47,32 +47,32 @@ export async function getContainerConfiguration(containerId: string): Promise<Co
 
 export async function updateContainerConfiguration(containerId: string, config: ContainerCreate): Promise<ContainerCreateResponse> {
   const result = await DockerService.updateContainerConfigurationDockerContainersContainerIdPut(containerId, config);
-  revalidatePath("/docker");
-  revalidatePath(`/docker/${containerId}`);
+  revalidatePath("/docker/containers");
+  revalidatePath(`/docker/containers/${containerId}`);
   return result;
 }
 
 export async function stopContainer(containerId: string): Promise<DataResponse> {
   const result = await DockerService.stopOneContainerDockerContainersContainerIdStopPost(containerId);
-  revalidatePath("/docker");
+  revalidatePath("/docker/containers");
   return result;
 }
 
 export async function startContainer(containerId: string): Promise<DataResponse> {
   const result = await DockerService.startOneContainerDockerContainersContainerIdStartPost(containerId);
-  revalidatePath("/docker");
+  revalidatePath("/docker/containers");
   return result;
 }
 
 export async function restartContainer(containerId: string): Promise<ContainerResponse> {
   const result = await DockerService.restartOneContainerDockerContainersContainerIdRestartPost(containerId);
-  revalidatePath("/docker");
+  revalidatePath("/docker/containers");
   return result;
 }
 
 export async function removeContainer(containerId: string, deleteDatabase: boolean = false, deleteVolumes: boolean = false, deleteDns: boolean = false): Promise<SuccessResponse> {
   const result = await DockerService.removeOneContainerDockerContainersContainerIdDelete(containerId, deleteDatabase, deleteVolumes, deleteDns);
-  revalidatePath("/docker");
+  revalidatePath("/docker/containers");
   return result;
 }
 
@@ -90,6 +90,6 @@ export async function getNetwork(networkId: string): Promise<DataResponse> {
 
 export async function removeNetwork(networkId: string): Promise<SuccessResponse> {
   const result = await DockerService.removeOneNetworkDockerNetworksNetworkIdDelete(networkId);
-  revalidatePath("/docker");
+  revalidatePath("/docker/containers");
   return result;
 }

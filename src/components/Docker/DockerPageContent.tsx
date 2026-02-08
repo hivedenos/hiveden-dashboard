@@ -50,7 +50,7 @@ export function DockerPageContent({ containers }: { containers: DockerContainer[
                 <Menu.Dropdown>
                   <Menu.Item
                     component={Link}
-                    href="/docker/new/import-compose"
+                    href="/docker/containers/new/import-compose"
                     leftSection={<IconFileImport style={{ width: rem(16), height: rem(16) }} stroke={1.5} />}
                   >
                     Import from Docker Compose
