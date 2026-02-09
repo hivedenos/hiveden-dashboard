@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Group, Box, Collapse, ThemeIcon, Text, UnstyledButton, rem, NavLink } from '@mantine/core';
-import { IconChevronRight } from '@tabler/icons-react';
+import { Box, NavLink, rem, Tooltip } from '@mantine/core';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import classes from './LinksGroup.module.css';
@@ -29,15 +28,17 @@ export function LinksGroup({ icon: Icon, label, link, initiallyOpened, links, is
   // If collapsed (File explorer mode), we show a simpler view
   if (isCollapsed) {
       return (
-        <NavLink
-            component={Link}
-            href={link || '#'}
-            label={null}
-            leftSection={<Icon size="1rem" stroke={1.5} />}
-            active={isActive || isChildActive}
-            variant="transparent" // Changed from light to transparent
-            className={classes.link}
-        />
+        <Tooltip label={label} position="right" withArrow>
+          <NavLink
+              component={Link}
+              href={link || '#'}
+              label={null}
+              leftSection={<Icon size="1rem" stroke={1.7} />}
+              active={isActive || isChildActive}
+              variant="transparent"
+              className={`${classes.link} ${classes.iconOnly}`}
+          />
+        </Tooltip>
       );
   }
 
@@ -48,9 +49,9 @@ export function LinksGroup({ icon: Icon, label, link, initiallyOpened, links, is
             component={Link}
             href={link || '#'}
             label={label}
-            leftSection={<Icon size="1rem" stroke={1.5} />}
+            leftSection={<Icon size="1rem" stroke={1.7} />}
             active={isActive}
-            variant="transparent" // Changed from light to transparent
+            variant="transparent"
             className={classes.link}
         />
       );
@@ -60,20 +61,17 @@ export function LinksGroup({ icon: Icon, label, link, initiallyOpened, links, is
   return (
     <NavLink
         label={label}
-        leftSection={<Icon size="1rem" stroke={1.5} />}
+        leftSection={<Icon size="1rem" stroke={1.7} />}
         childrenOffset={0}
         defaultOpened={opened}
         active={isChildActive}
-        variant="transparent" // Changed from light to transparent
+        variant="transparent"
         onChange={setOpened}
         className={classes.link}
     >
         <Box 
-            style={{ 
-                borderLeft: `1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4))`, 
-                marginLeft: rem(18), 
-                paddingLeft: rem(10) 
-            }}
+            className={classes.childContainer}
+            style={{ marginLeft: rem(18), paddingLeft: rem(10) }}
         >
             {links.map((item) => (
                 <NavLink
@@ -82,8 +80,8 @@ export function LinksGroup({ icon: Icon, label, link, initiallyOpened, links, is
                     href={item.link}
                     label={item.label}
                     active={pathname === item.link}
-                    variant="transparent" // Changed from light to transparent
-                    className={classes.link}
+                    variant="transparent"
+                    className={`${classes.link} ${classes.childLink}`}
                 />
             ))}
         </Box>

@@ -1,9 +1,34 @@
-.link[data-active] {
-  background-color: transparent;
-  color: var(--mantine-primary-color-filled);
-  font-weight: 500;
+.link {
+  border-radius: var(--mantine-radius-md);
+  margin-bottom: 4px;
+  transition: background-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
 
-.link[data-active]:hover {
-  background-color: var(--mantine-color-gray-0);
+.link:hover {
+  background-color: light-dark(var(--mantine-color-gray-1), rgba(255, 255, 255, 0.04));
+}
+
+.link[data-active] {
+  background: light-dark(
+    linear-gradient(90deg, rgba(59, 130, 246, 0.14) 0%, rgba(59, 130, 246, 0.03) 100%),
+    linear-gradient(90deg, rgba(59, 130, 246, 0.24) 0%, rgba(59, 130, 246, 0.08) 100%)
+  );
+  color: var(--mantine-primary-color-filled);
+  font-weight: 600;
+  box-shadow: inset 3px 0 0 var(--mantine-primary-color-filled);
+}
+
+.iconOnly {
+  justify-content: center;
+  padding-inline: 0;
+}
+
+.childContainer {
+  border-left: 1px solid light-dark(var(--mantine-color-gray-3), var(--mantine-color-dark-4));
+  margin-top: 2px;
+  margin-bottom: 6px;
+}
+
+.childLink {
+  margin-bottom: 2px;
 }

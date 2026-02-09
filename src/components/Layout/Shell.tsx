@@ -1,9 +1,9 @@
 "use client";
 
 import { useApplicationVersion } from "@/lib/useApplicationVersion";
-import { ActionIcon, AppShell, Badge, Burger, Group, ScrollArea, Text, useMantineColorScheme } from "@mantine/core";
+import { ActionIcon, AppShell, Badge, Box, Burger, Divider, Group, ScrollArea, Stack, Text, ThemeIcon, useMantineColorScheme } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconBrandDocker, IconDatabase, IconDeviceFloppy, IconFileText, IconFolder, IconInfoCircle, IconMoon, IconPackage, IconServer, IconSettings, IconShare, IconSun, IconTemplate } from "@tabler/icons-react";
+import { IconBrandDocker, IconDatabase, IconDeviceFloppy, IconFileText, IconFolder, IconInfoCircle, IconMoon, IconPackage, IconServer, IconSettings, IconShare, IconSun, IconTemplate, IconHomeSignal, IconLayoutSidebarLeftCollapse } from "@tabler/icons-react";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LinksGroup } from "./LinksGroup";
@@ -71,16 +71,26 @@ export function Shell({ children }: { children: React.ReactNode }) {
         <Group h="100%" px="md" justify="space-between">
           <Group>
             <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />
-            <Text fw={700} size="lg">
-              Hiveden
-            </Text>
+            <Group gap="xs">
+              <ThemeIcon size="md" radius="md" variant="light" color="blue">
+                <IconHomeSignal size={16} />
+              </ThemeIcon>
+              <Stack gap={0}>
+                <Text fw={700} size="lg" lh={1}>
+                  Hiveden
+                </Text>
+                <Text size="xs" c="dimmed" lh={1.1}>
+                  Control Center
+                </Text>
+              </Stack>
+            </Group>
           </Group>
           <Group gap="xs">
-            <Badge variant="outline" color="gray">
+            <Badge variant="light" color="gray">
               UI: {frontendVersion}
             </Badge>
             {!isLoading && backendVersion && (
-              <Badge variant="outline" color="gray">
+              <Badge variant="light" color="gray">
                 API: {backendVersion}
               </Badge>
             )}
@@ -92,6 +102,19 @@ export function Shell({ children }: { children: React.ReactNode }) {
       </AppShell.Header>
 
       <AppShell.Navbar className={classes.navbar}>
+        <Box className={classes.sidebarHeader}>
+          <Group justify={isFiles ? "center" : "space-between"} align="center">
+            {!isFiles && (
+              <Text fw={600} size="sm" c="dimmed" tt="uppercase" className={classes.sectionLabel}>
+                Navigation
+              </Text>
+            )}
+            <ThemeIcon size="sm" variant="light" color="gray">
+              <IconLayoutSidebarLeftCollapse size={14} />
+            </ThemeIcon>
+          </Group>
+        </Box>
+
         <ScrollArea className={classes.links}>
           <div className={classes.linksInner}>
             {navItems.map((item) => (
@@ -101,6 +124,14 @@ export function Shell({ children }: { children: React.ReactNode }) {
         </ScrollArea>
 
         <div className={classes.footer}>
+          {!isFiles && (
+            <>
+              <Divider my="xs" />
+              <Text fw={600} size="sm" c="dimmed" tt="uppercase" className={classes.sectionLabel}>
+                Maintenance
+              </Text>
+            </>
+          )}
           {bottomNavItems.map((item) => (
             <LinksGroup key={item.label} {...item} isCollapsed={isFiles} />
           ))}
