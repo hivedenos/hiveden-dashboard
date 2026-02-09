@@ -45,7 +45,7 @@ export const AvailableWidgets = [
   },
   {
     id: "system_metrics",
-    label: "System Metrics (CPU/RAM/Disk)",
+    label: "System Metrics (CPU/RAM/Network)",
     defaultW: 2,
     defaultH: 1,
     minW: 1,

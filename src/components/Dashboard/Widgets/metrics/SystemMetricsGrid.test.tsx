@@ -2,16 +2,16 @@ import { expect, test, vi, afterEach } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { SystemMetricsGrid } from './SystemMetricsGrid'
 import { MantineProvider } from '@mantine/core'
-import * as useSystemMetricsModule from '@/hooks/useSystemMetrics'
+import * as useHostMetricsModule from '@/hooks/useHostMetrics'
 
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
 })
 
-// Mock useSystemMetrics
-vi.mock('@/hooks/useSystemMetrics', () => ({
-  useSystemMetrics: vi.fn()
+// Mock useHostMetrics
+vi.mock('@/hooks/useHostMetrics', () => ({
+  useHostMetrics: vi.fn()
 }))
 
 // Mock ResizeObserver
@@ -45,12 +45,15 @@ function renderWithMantine(ui: React.ReactNode) {
 test('SystemMetricsGrid renders all metrics', () => {
   // Mock return value
   const mockData = {
-    cpu: { usage: 10, history: [] },
-    memory: { usage: 20, total: 100, used: 20, history: [] },
-    disk: { usage: 30, total: 100, used: 30, history: [] },
+    cpuPercent: 10,
+    memoryUsedBytes: 20,
+    memoryTotalBytes: 100,
+    memoryPercent: 20,
+    networkRxBps: 1000,
+    networkTxBps: 2000,
   };
 
-  vi.mocked(useSystemMetricsModule.useSystemMetrics).mockReturnValue({
+  vi.mocked(useHostMetricsModule.useHostMetrics).mockReturnValue({
     data: mockData,
     loading: false,
     error: null
@@ -59,12 +62,14 @@ test('SystemMetricsGrid renders all metrics', () => {
   renderWithMantine(<SystemMetricsGrid />)
 
   expect(screen.getByText('CPU')).toBeDefined()
-  expect(screen.getByText('Memory')).toBeDefined()
-  expect(screen.getByText('Disk')).toBeDefined()
+  expect(screen.getByText('RAM')).toBeDefined()
+  expect(screen.getByText('Network')).toBeDefined()
+  expect(screen.getByLabelText('Download')).toBeDefined()
+  expect(screen.getByLabelText('Upload')).toBeDefined()
 })
 
 test('SystemMetricsGrid passes loading state', () => {
-  vi.mocked(useSystemMetricsModule.useSystemMetrics).mockReturnValue({
+  vi.mocked(useHostMetricsModule.useHostMetrics).mockReturnValue({
     data: null,
     loading: true,
     error: null
@@ -73,6 +78,6 @@ test('SystemMetricsGrid passes loading state', () => {
   renderWithMantine(<SystemMetricsGrid />)
 
   expect(screen.getByText('CPU')).toBeDefined()
-  expect(screen.getByText('Memory')).toBeDefined()
-  expect(screen.getByText('Disk')).toBeDefined()
+  expect(screen.getByText('RAM')).toBeDefined()
+  expect(screen.getByText('Network')).toBeDefined()
 })
