@@ -55,6 +55,7 @@ export const Terminal: React.FC<TerminalProps> = ({
 
   const isReadOnly = readOnly ?? effectiveMode === "stream";
   const heightStyle = typeof height === "number" ? `${height}px` : height;
+  const normalizeLineEndings = (value: string) => value.replace(/\r?\n/g, "\r\n");
 
   useEffect(() => {
     if (!terminalRef.current) return;
@@ -179,14 +180,14 @@ export const Terminal: React.FC<TerminalProps> = ({
         try {
           message = JSON.parse(payload) as WsMessage;
         } catch {
-          xtermRef.current.write(payload);
+          xtermRef.current.write(normalizeLineEndings(payload));
           return;
         }
 
         if (message.type === "output" || message.type === "log") {
           const outputText = typeof message.data?.output === "string" ? message.data.output : "";
           if (outputText) {
-            xtermRef.current.write(outputText);
+            xtermRef.current.write(normalizeLineEndings(outputText));
           }
           return;
         }
