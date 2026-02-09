@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { DiskDetail, Partition } from "@/lib/client";
 import {
+  Paper,
   Card,
   Group,
   Text,
@@ -15,6 +16,7 @@ import {
   Button,
   Box,
   Modal,
+  ScrollArea,
   TextInput,
   Switch,
   Alert,
@@ -29,6 +31,10 @@ import {
   IconChevronUp,
   IconAlertCircle,
   IconCheck,
+  IconCircleCheck,
+  IconCircleX,
+  IconCircleOff,
+  IconFolders,
 } from "@tabler/icons-react";
 import { useDisclosure } from "@mantine/hooks";
 import { formatBytes } from "@/lib/format";
@@ -68,6 +74,7 @@ export function DiskDetails({ disk }: DiskDetailsProps) {
     if (temp < 50) return "yellow";
     return "red";
   };
+  const mountedPartitions = (disk.partitions || []).filter((part) => (part.mountpoints && part.mountpoints.length > 0) || !!part.mountpoint).length;
 
   const handleMountClick = (partition: Partition) => {
     setSelectedPartition(partition);
@@ -104,8 +111,9 @@ export function DiskDetails({ disk }: DiskDetailsProps) {
         });
         router.refresh();
       }
-    } catch (error: any) {
-      setMountError(error.message || "Failed to mount partition");
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Failed to mount partition";
+      setMountError(message);
     } finally {
       setMounting(false);
     }
@@ -113,6 +121,57 @@ export function DiskDetails({ disk }: DiskDetailsProps) {
 
   return (
     <Stack gap="lg">
+      <SimpleGrid cols={{ base: 1, sm: 3 }}>
+        <Paper withBorder radius="md" p="md">
+          <Group justify="space-between">
+            <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+              Capacity
+            </Text>
+            <ThemeIcon size="sm" variant="light" color="blue">
+              <IconDeviceDesktop size={14} />
+            </ThemeIcon>
+          </Group>
+          <Text fw={700} size="xl" mt={4}>
+            {formatBytes(disk.size)}
+          </Text>
+          <Text size="xs" c="dimmed">
+            Raw disk size
+          </Text>
+        </Paper>
+        <Paper withBorder radius="md" p="md">
+          <Group justify="space-between">
+            <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+              Partitions
+            </Text>
+            <ThemeIcon size="sm" variant="light" color="grape">
+              <IconFolders size={14} />
+            </ThemeIcon>
+          </Group>
+          <Text fw={700} size="xl" mt={4}>
+            {(disk.partitions || []).length}
+          </Text>
+          <Text size="xs" c="dimmed">
+            Total discovered
+          </Text>
+        </Paper>
+        <Paper withBorder radius="md" p="md">
+          <Group justify="space-between">
+            <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+              Mounted
+            </Text>
+            <ThemeIcon size="sm" variant="light" color="teal">
+              <IconCircleCheck size={14} />
+            </ThemeIcon>
+          </Group>
+          <Text fw={700} size="xl" mt={4}>
+            {mountedPartitions}
+          </Text>
+          <Text size="xs" c="dimmed">
+            Active mount points
+          </Text>
+        </Paper>
+      </SimpleGrid>
+
       {/* Header */}
       <Card shadow="sm" padding="lg" radius="md" withBorder>
         <Group justify="space-between" mb="md">
@@ -130,7 +189,7 @@ export function DiskDetails({ disk }: DiskDetailsProps) {
             </div>
           </Group>
           <Group>
-            <Badge size="lg" color={disk.smart ? getHealthColor(disk.smart.healthy) : "gray"}>
+            <Badge size="lg" color={disk.smart ? getHealthColor(disk.smart.healthy) : "gray"} variant="light">
               {disk.smart ? (disk.smart.healthy ? "HEALTHY" : "FAILED") : "UNKNOWN"}
             </Badge>
             <Badge variant="outline">{disk.rotational ? "HDD" : "SSD"}</Badge>
@@ -189,50 +248,73 @@ export function DiskDetails({ disk }: DiskDetailsProps) {
 
       {/* Partitions */}
       <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Text fw={600} mb="md">
-          Partitions
-        </Text>
+        <Group justify="space-between" mb="md">
+          <Text fw={600}>Partitions</Text>
+          <Badge variant="light" color="blue">
+            {(disk.partitions || []).length} total
+          </Badge>
+        </Group>
         {(disk.partitions?.length || 0) === 0 ? (
           <Text c="dimmed" size="sm">
             No partitions found.
           </Text>
         ) : (
-          <Table>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Mount Point</Table.Th>
-                <Table.Th>Size</Table.Th>
-                <Table.Th>FS Type</Table.Th>
-                <Table.Th>Action</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {(disk.partitions || []).map((part) => {
-                const isMounted = (part.mountpoints && part.mountpoints.length > 0) || !!part.mountpoint;
-                const mountPointsDisplay =
-                  part.mountpoints && part.mountpoints.length > 0
-                    ? part.mountpoints.map((mp) => mp.path).join(", ")
-                    : part.mountpoint || "-";
+          <ScrollArea>
+            <Table highlightOnHover withTableBorder withColumnBorders striped>
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th>Name</Table.Th>
+                  <Table.Th>Mount Point</Table.Th>
+                  <Table.Th>Size</Table.Th>
+                  <Table.Th>FS Type</Table.Th>
+                  <Table.Th>Status</Table.Th>
+                  <Table.Th>Action</Table.Th>
+                </Table.Tr>
+              </Table.Thead>
+              <Table.Tbody>
+                {(disk.partitions || []).map((part) => {
+                  const isMounted = (part.mountpoints && part.mountpoints.length > 0) || !!part.mountpoint;
+                  const mountPointsDisplay =
+                    part.mountpoints && part.mountpoints.length > 0
+                      ? part.mountpoints.map((mp) => mp.path).join(", ")
+                      : part.mountpoint || "-";
 
-                return (
-                  <Table.Tr key={part.path}>
-                    <Table.Td>{part.name}</Table.Td>
-                    <Table.Td>{mountPointsDisplay}</Table.Td>
-                    <Table.Td>{formatBytes(part.size)}</Table.Td>
-                    <Table.Td>{part.fstype || "-"}</Table.Td>
-                    <Table.Td>
-                      {!isMounted && (
-                        <Button size="xs" variant="light" onClick={() => handleMountClick(part)}>
-                          Mount
-                        </Button>
-                      )}
-                    </Table.Td>
-                  </Table.Tr>
-                );
-              })}
-            </Table.Tbody>
-          </Table>
+                  return (
+                    <Table.Tr key={part.path}>
+                      <Table.Td fw={600}>{part.name}</Table.Td>
+                      <Table.Td>
+                        <Text size="sm" ff="monospace">
+                          {mountPointsDisplay}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>{formatBytes(part.size)}</Table.Td>
+                      <Table.Td>{part.fstype || "-"}</Table.Td>
+                      <Table.Td>
+                        <Badge
+                          variant="light"
+                          color={isMounted ? "teal" : "gray"}
+                          leftSection={isMounted ? <IconCircleCheck size={12} /> : <IconCircleOff size={12} />}
+                        >
+                          {isMounted ? "Mounted" : "Not mounted"}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        {!isMounted ? (
+                          <Button size="xs" variant="light" onClick={() => handleMountClick(part)}>
+                            Mount
+                          </Button>
+                        ) : (
+                          <Text size="xs" c="dimmed">
+                            Active
+                          </Text>
+                        )}
+                      </Table.Td>
+                    </Table.Tr>
+                  );
+                })}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
         )}
       </Card>
 
@@ -247,8 +329,8 @@ export function DiskDetails({ disk }: DiskDetailsProps) {
           </Group>
 
           <Collapse in={opened}>
-            <Box style={{ overflowX: "auto" }}>
-              <Table striped highlightOnHover>
+            <ScrollArea>
+              <Table striped highlightOnHover withTableBorder withColumnBorders>
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th>ID</Table.Th>
@@ -275,12 +357,17 @@ export function DiskDetails({ disk }: DiskDetailsProps) {
                   })}
                 </Table.Tbody>
               </Table>
-            </Box>
+            </ScrollArea>
           </Collapse>
         </Card>
       ) : (
         <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Text c="dimmed">S.M.A.R.T. health data is unavailable for this device.</Text>
+          <Group gap="xs">
+            <ThemeIcon variant="light" color="gray">
+              <IconCircleX size={14} />
+            </ThemeIcon>
+            <Text c="dimmed">S.M.A.R.T. health data is unavailable for this device.</Text>
+          </Group>
         </Card>
       )}
 

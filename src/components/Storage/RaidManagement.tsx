@@ -5,8 +5,8 @@ import { Terminal } from "@/components/Terminal/Terminal";
 import type { Disk } from "@/lib/client";
 import { formatBytes } from "@/lib/format";
 import { getWebSocketUrl } from "@/lib/shellClient";
-import { Badge, Button, Card, Code, Group, Modal, Select, SimpleGrid, Stack, Text, ThemeIcon, Title, UnstyledButton } from "@mantine/core";
-import { IconDatabase, IconDeviceFloppy, IconPlus, IconServer } from "@tabler/icons-react";
+import { Alert, Badge, Box, Button, Card, Code, Group, Modal, Paper, Select, SimpleGrid, Stack, Text, ThemeIcon, Title, UnstyledButton } from "@mantine/core";
+import { IconAlertTriangle, IconDatabase, IconDeviceFloppy, IconPlus, IconServer } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 
@@ -21,6 +21,8 @@ export function RaidManagement({ raidId, allDisks }: RaidManagementProps) {
   // Filter disks
   const memberDisks = allDisks.filter((d) => d.raid_group === raidId);
   const availableDisks = allDisks.filter((d) => d.available && !d.raid_group && !d.is_system);
+  const memberCapacity = memberDisks.reduce((acc, disk) => acc + (disk.size || 0), 0);
+  const availableCapacity = availableDisks.reduce((acc, disk) => acc + (disk.size || 0), 0);
 
   // Get RAID level from the first member disk (assuming consistent)
   const currentRaidLevel = memberDisks[0]?.raid_level || "Unknown RAID";
@@ -86,6 +88,53 @@ export function RaidManagement({ raidId, allDisks }: RaidManagementProps) {
 
   return (
     <Stack gap="xl">
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }}>
+        <Paper withBorder radius="md" p="md">
+          <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+            RAID Level
+          </Text>
+          <Text fw={700} size="xl" mt={4}>
+            {currentRaidLevel.toUpperCase()}
+          </Text>
+          <Text size="xs" c="dimmed">
+            Active array level
+          </Text>
+        </Paper>
+        <Paper withBorder radius="md" p="md">
+          <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+            Member Disks
+          </Text>
+          <Text fw={700} size="xl" mt={4}>
+            {memberDisks.length}
+          </Text>
+          <Text size="xs" c="dimmed">
+            Disks in this array
+          </Text>
+        </Paper>
+        <Paper withBorder radius="md" p="md">
+          <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+            Member Capacity
+          </Text>
+          <Text fw={700} size="xl" mt={4}>
+            {formatBytes(memberCapacity)}
+          </Text>
+          <Text size="xs" c="dimmed">
+            Raw sum across members
+          </Text>
+        </Paper>
+        <Paper withBorder radius="md" p="md">
+          <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+            Available to Add
+          </Text>
+          <Text fw={700} size="xl" mt={4}>
+            {availableDisks.length}
+          </Text>
+          <Text size="xs" c="dimmed">
+            {formatBytes(availableCapacity)} total free disks
+          </Text>
+        </Paper>
+      </SimpleGrid>
+
       <Card withBorder padding="lg" radius="md">
         <Group mb="md">
           <ThemeIcon size="xl" variant="light" color="indigo">
@@ -109,7 +158,7 @@ export function RaidManagement({ raidId, allDisks }: RaidManagementProps) {
         </SimpleGrid>
       </Card>
 
-      <div>
+      <Paper withBorder radius="md" p="lg">
         <Group mb="sm">
             <IconDatabase size={20} />
             <Title order={4}>Available Disks</Title>
@@ -119,9 +168,9 @@ export function RaidManagement({ raidId, allDisks }: RaidManagementProps) {
         </Text>
         
         {availableDisks.length === 0 ? (
-            <Card withBorder padding="md" radius="md" bg="var(--mantine-color-gray-0)">
-                <Text c="dimmed" ta="center">No available disks found.</Text>
-            </Card>
+            <Alert color="gray" variant="light" title="No available disks">
+              No eligible disks are currently available to join this RAID group.
+            </Alert>
         ) : (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
             {availableDisks.map((disk) => (
@@ -134,16 +183,16 @@ export function RaidManagement({ raidId, allDisks }: RaidManagementProps) {
             ))}
             </SimpleGrid>
         )}
-      </div>
+      </Paper>
 
        {/* Add Disk Confirmation Modal */}
-       <Modal opened={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} title="Add Disk to RAID Array">
+       <Modal opened={isConfirmOpen} onClose={() => setIsConfirmOpen(false)} title="Add Disk to RAID Array" radius="lg">
         <Stack gap="md">
+          <Alert color="orange" icon={<IconAlertTriangle size={16} />} variant="light" title="Data Erase Warning">
+            Adding a disk will erase all existing data on that disk.
+          </Alert>
           <Text>
             Are you sure you want to add <Code>{selectedDisk?.name}</Code> ({selectedDisk?.path}) to RAID group <Code>{raidId}</Code>?
-          </Text>
-          <Text size="sm" c="red">
-            Warning: This action will erase all data on the new disk.
           </Text>
 
           <Select
@@ -162,8 +211,12 @@ export function RaidManagement({ raidId, allDisks }: RaidManagementProps) {
           />
 
           <Group justify="flex-end" mt="md">
-            <Button variant="default" onClick={() => setIsConfirmOpen(false)}>Cancel</Button>
-            <Button color="indigo" onClick={handleAddDisk}>Add Disk</Button>
+            <Button variant="default" onClick={() => setIsConfirmOpen(false)}>
+              Cancel
+            </Button>
+            <Button color="indigo" onClick={handleAddDisk}>
+              Add Disk
+            </Button>
           </Group>
         </Stack>
       </Modal>
@@ -180,7 +233,7 @@ function DiskCard({ disk, onClick, isMember, onAdd }: { disk: Disk; onClick: () 
   const Icon = disk.rotational ? IconDatabase : IconDeviceFloppy;
 
   return (
-      <Card shadow="sm" padding="lg" radius="md" withBorder className="hover:shadow-md" style={{ transition: "box-shadow 0.2s" }}>
+      <Card shadow="sm" padding="lg" radius="md" withBorder style={{ transition: "box-shadow 0.2s, transform 0.2s" }}>
         <Group justify="space-between" mb="xs">
           <UnstyledButton onClick={onClick} style={{ flex: 1 }}>
             <Group gap="xs">
@@ -230,6 +283,11 @@ function DiskCard({ disk, onClick, isMember, onAdd }: { disk: Disk; onClick: () 
                 <Text size="sm" c="dimmed">Path</Text>
                 <Code>{disk.path}</Code>
             </Group>
+            <Box>
+              <Text size="xs" c="dimmed">
+                Click for full disk details
+              </Text>
+            </Box>
             </Stack>
         </UnstyledButton>
       </Card>
