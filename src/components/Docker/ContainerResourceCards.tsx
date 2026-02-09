@@ -27,14 +27,20 @@ export function ContainerResourceCards({ containerName, containerState }: Contai
   const { data, loading, error } = useContainerMetrics(containerName);
   const isRunning = (containerState || "").toLowerCase() === "running";
   const hasMetrics = Boolean(data);
+  const cpuPercent = data?.cpuPercent ?? null;
+  const memoryPercent = data?.memoryPercent ?? null;
+  const memoryUsedBytes = data?.memoryUsedBytes ?? null;
+  const memoryLimitBytes = data?.memoryLimitBytes ?? null;
+  const networkRxBps = data?.networkRxBps ?? null;
+  const networkTxBps = data?.networkTxBps ?? null;
 
-  const cpuText = hasMetrics ? formatPercent(data.cpuPercent) : "N/A";
-  const memoryPercentText = hasMetrics ? formatPercent(data.memoryPercent) : "N/A";
+  const cpuText = hasMetrics ? formatPercent(cpuPercent) : "N/A";
+  const memoryPercentText = hasMetrics ? formatPercent(memoryPercent) : "N/A";
   const memoryDetail =
-    hasMetrics && data.memoryUsedBytes !== null
-      ? `${formatBytes(data.memoryUsedBytes || 0)} / ${data.memoryLimitBytes ? formatBytes(data.memoryLimitBytes) : "No limit"}`
+    hasMetrics && memoryUsedBytes !== null
+      ? `${formatBytes(memoryUsedBytes || 0)} / ${memoryLimitBytes ? formatBytes(memoryLimitBytes) : "No limit"}`
       : "--";
-  const networkText = hasMetrics ? `RX ${formatRate(data.networkRxBps)} · TX ${formatRate(data.networkTxBps)}` : "RX -- · TX --";
+  const networkText = hasMetrics ? `RX ${formatRate(networkRxBps)} · TX ${formatRate(networkTxBps)}` : "RX -- · TX --";
 
   const statusHint = error
     ? "Prometheus unavailable"
