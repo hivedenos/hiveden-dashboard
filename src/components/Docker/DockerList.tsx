@@ -1,8 +1,8 @@
 "use client";
 
-import { Table, Group, Badge, Pagination, Stack, Select, Text, Checkbox } from "@mantine/core";
-import { IconCheck, IconX } from "@tabler/icons-react";
-import { useMemo, useState } from "react";
+import { Table, Group, Badge, Pagination, Stack, Select, Text, Checkbox, TextInput, Paper } from "@mantine/core";
+import { IconCheck, IconSearch, IconX } from "@tabler/icons-react";
+import { useEffect, useMemo, useState } from "react";
 import type { Container } from "@/lib/client";
 import { ContainerActions } from "./ContainerActions";
 import { useContainersMetricsMap } from "@/hooks/useContainersMetricsMap";
@@ -18,6 +18,8 @@ interface DockerListProps {
 export function DockerList({ containers, selectedRows, setSelectedRows }: DockerListProps) {
   const [activePage, setActivePage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<string>("10");
+  const [query, setQuery] = useState("");
+  const [stateFilter, setStateFilter] = useState<string>("all");
   const containerNames = useMemo(() => containers.map((container) => container.Name || ""), [containers]);
   const { data: metricsMap, error: metricsError } = useContainersMetricsMap(containerNames);
 
@@ -26,12 +28,21 @@ export function DockerList({ containers, selectedRows, setSelectedRows }: Docker
     return !!(container.Labels && container.Labels["managed-by"] === "hiveden");
   };
 
+  const filteredContainers = containers.filter((container) => {
+    const matchesQuery =
+      query.trim().length === 0 ||
+      container.Name?.toLowerCase().includes(query.toLowerCase()) ||
+      container.Image?.toLowerCase().includes(query.toLowerCase());
+    const matchesState = stateFilter === "all" || (container.State || "").toLowerCase() === stateFilter;
+    return matchesQuery && matchesState;
+  });
+
   // Pagination logic
   const itemsPerPageNum = parseInt(itemsPerPage);
-  const totalPages = Math.ceil(containers.length / itemsPerPageNum);
+  const totalPages = Math.max(1, Math.ceil(filteredContainers.length / itemsPerPageNum));
   const startIndex = (activePage - 1) * itemsPerPageNum;
   const endIndex = startIndex + itemsPerPageNum;
-  const paginatedContainers = containers.slice(startIndex, endIndex);
+  const paginatedContainers = filteredContainers.slice(startIndex, endIndex);
 
   // Reset to page 1 when items per page changes
   const handleItemsPerPageChange = (value: string | null) => {
@@ -39,6 +50,16 @@ export function DockerList({ containers, selectedRows, setSelectedRows }: Docker
       setItemsPerPage(value);
       setActivePage(1);
     }
+  };
+
+  const handleQueryChange = (value: string) => {
+    setQuery(value);
+    setActivePage(1);
+  };
+
+  const handleStateFilterChange = (value: string | null) => {
+    setStateFilter(value || "all");
+    setActivePage(1);
   };
 
   // Row selection handlers
@@ -81,6 +102,12 @@ export function DockerList({ containers, selectedRows, setSelectedRows }: Docker
   const hasAnyMetrics = Object.values(metricsMap).some(
     (metric) => metric.cpuPercent !== null || metric.networkRxBps !== null || metric.networkTxBps !== null
   );
+
+  useEffect(() => {
+    if (activePage > totalPages) {
+      setActivePage(totalPages);
+    }
+  }, [activePage, totalPages]);
 
   const rows = paginatedContainers.map((container) => {
     const metric = metricsMap[normalizeContainerName(container.Name)];
@@ -135,17 +162,47 @@ export function DockerList({ containers, selectedRows, setSelectedRows }: Docker
 
   return (
     <Stack gap="md">
+      <Paper withBorder radius="md" p="sm">
+        <Group justify="space-between" align="flex-end" wrap="wrap">
+          <Group>
+            <TextInput
+              label="Search"
+              placeholder="Name or image"
+              leftSection={<IconSearch size={16} />}
+              value={query}
+              onChange={(event) => handleQueryChange(event.currentTarget.value)}
+              w={240}
+            />
+            <Select
+              label="State"
+              value={stateFilter}
+              onChange={handleStateFilterChange}
+              data={[
+                { value: "all", label: "All states" },
+                { value: "running", label: "Running" },
+                { value: "exited", label: "Exited" },
+                { value: "created", label: "Created" },
+              ]}
+              w={160}
+            />
+          </Group>
+          <Text size="sm" c="dimmed">
+            Showing {paginatedContainers.length} of {filteredContainers.length} containers
+          </Text>
+        </Group>
+      </Paper>
+
       {metricsError && (
         <Text size="sm" c="yellow">
           Live metrics unavailable: {metricsError}
         </Text>
       )}
-      {!metricsError && !hasAnyMetrics && containers.length > 0 && (
+      {!metricsError && !hasAnyMetrics && filteredContainers.length > 0 && (
         <Text size="sm" c="dimmed">
           No Prometheus container metrics available yet. CPU and Network values will appear when samples are scraped.
         </Text>
       )}
-      <Table>
+      <Table striped highlightOnHover withTableBorder stickyHeader horizontalSpacing="md" verticalSpacing="sm">
         <Table.Thead>
           <Table.Tr>
             <Table.Th>
@@ -160,10 +217,22 @@ export function DockerList({ containers, selectedRows, setSelectedRows }: Docker
             <Table.Th>Actions</Table.Th>
           </Table.Tr>
         </Table.Thead>
-        <Table.Tbody>{rows}</Table.Tbody>
+        <Table.Tbody>
+          {rows.length > 0 ? (
+            rows
+          ) : (
+            <Table.Tr>
+              <Table.Td colSpan={8}>
+                <Text ta="center" c="dimmed" py="md">
+                  No containers match your filters.
+                </Text>
+              </Table.Td>
+            </Table.Tr>
+          )}
+        </Table.Tbody>
       </Table>
 
-      {containers.length > 10 && (
+      {filteredContainers.length > 10 && (
         <Group justify="space-between">
           <Group gap="xs">
             <Text size="sm">Items per page:</Text>
