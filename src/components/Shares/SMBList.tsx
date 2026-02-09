@@ -4,10 +4,10 @@ import { createSmbShare, deleteSmbShare, mountSmbShare, unmountSmbShare } from "
 import { getComprehensiveLocations } from "@/actions/system";
 import { SystemdServiceActions } from "@/components/Systemd/SystemdServiceActions";
 import type { FilesystemLocation, SMBShare, SMBMount } from "@/lib/client";
-import { ActionIcon, Autocomplete, Badge, Box, Button, Checkbox, Group, Modal, PasswordInput, Stack, Table, Text, TextInput, Title, Tooltip } from "@mantine/core";
+import { ActionIcon, Alert, Autocomplete, Badge, Box, Button, Checkbox, Grid, Group, Modal, Paper, PasswordInput, ScrollArea, Stack, Table, Text, TextInput, ThemeIcon, Title, Tooltip } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { notifications } from "@mantine/notifications";
-import { IconPlus, IconServer, IconTrash, IconUnlink } from "@tabler/icons-react";
+import { IconArrowDownRight, IconArrowUpRight, IconFolder, IconPlus, IconServer, IconShare, IconTrash, IconUnlink } from "@tabler/icons-react";
 import { useEffect, useState } from "react";
 
 export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMount[] }) {
@@ -40,6 +40,13 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
     persist: false,
   });
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+    return fallback;
+  };
+
   useEffect(() => {
     if (opened || mountOpened) {
       getComprehensiveLocations()
@@ -62,10 +69,10 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
         message: "Share deleted successfully",
         color: "green",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       notifications.show({
         title: "Error",
-        message: error.message || "Failed to delete share",
+        message: getErrorMessage(error, "Failed to delete share"),
         color: "red",
       });
     } finally {
@@ -85,10 +92,10 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
         message: `${actionLabel} successful`,
         color: "green",
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       notifications.show({
         title: "Error",
-        message: error.message || `Failed to ${actionLabel.toLowerCase()}`,
+        message: getErrorMessage(error, `Failed to ${actionLabel.toLowerCase()}`),
         color: "red",
       });
     } finally {
@@ -123,10 +130,10 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
         browsable: true,
         guest_ok: false,
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
       notifications.show({
         title: "Error",
-        message: error.message || "Failed to create share",
+        message: getErrorMessage(error, "Failed to create share"),
         color: "red",
       });
     } finally {
@@ -150,8 +157,8 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
         notifications.show({ title: "Success", message: "Share mounted successfully", color: "green" });
         closeMount();
         setMountForm({ remote_path: "", mount_point: "", username: "", password: "", persist: false });
-    } catch (error: any) {
-        notifications.show({ title: "Error", message: error.message || "Failed to mount share", color: "red" });
+    } catch (error: unknown) {
+        notifications.show({ title: "Error", message: getErrorMessage(error, "Failed to mount share"), color: "red" });
     } finally {
         setMounting(false);
     }
@@ -159,8 +166,12 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
 
   const shareRows = shares.map((share) => (
     <Table.Tr key={share.name}>
-      <Table.Td>{share.name}</Table.Td>
-      <Table.Td>{share.path}</Table.Td>
+      <Table.Td fw={600}>{share.name}</Table.Td>
+      <Table.Td>
+        <Text size="sm" ff="monospace">
+          {share.path}
+        </Text>
+      </Table.Td>
       <Table.Td>
         <Group gap="xs">
           <Badge color={share.read_only ? "orange" : "green"} variant="light">
@@ -183,8 +194,16 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
 
   const mountRows = mounts.map((mount) => (
     <Table.Tr key={mount.mount_point}>
-      <Table.Td>{mount.remote_path}</Table.Td>
-      <Table.Td>{mount.mount_point}</Table.Td>
+      <Table.Td>
+        <Text size="sm" ff="monospace">
+          {mount.remote_path}
+        </Text>
+      </Table.Td>
+      <Table.Td>
+        <Text size="sm" ff="monospace">
+          {mount.mount_point}
+        </Text>
+      </Table.Td>
       <Table.Td>
           <Badge color={mount.is_persistent ? "blue" : "gray"} variant="light">
             {mount.is_persistent ? "Persistent" : "Temporary"}
@@ -219,60 +238,150 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
 
   return (
     <Box>
-      <SystemdServiceActions serviceName="smb" title="Samba Service (smb)" />
+      <Stack gap="md">
+        <SystemdServiceActions serviceName="smb" title="Samba Service (smb)" />
 
-      <Group justify="flex-end" mb="md">
-        <Button leftSection={<IconServer size={16} />} variant="default" onClick={openMount}>
-           Mount Remote Share
-        </Button>
-        <Button leftSection={<IconPlus size={16} />} onClick={open}>
-          Create Share
-        </Button>
-      </Group>
+        <Grid gutter="md">
+          <Grid.Col span={{ base: 12, sm: 4 }}>
+            <Paper withBorder radius="md" p="md">
+              <Group justify="space-between" align="center">
+                <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                  Exported
+                </Text>
+                <ThemeIcon variant="light" color="blue" size="sm">
+                  <IconArrowUpRight size={14} />
+                </ThemeIcon>
+              </Group>
+              <Text size="xl" fw={700} mt={4}>
+                {shares.length}
+              </Text>
+              <Text size="xs" c="dimmed">
+                Local shares served by Samba
+              </Text>
+            </Paper>
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, sm: 4 }}>
+            <Paper withBorder radius="md" p="md">
+              <Group justify="space-between" align="center">
+                <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                  Mounted
+                </Text>
+                <ThemeIcon variant="light" color="teal" size="sm">
+                  <IconArrowDownRight size={14} />
+                </ThemeIcon>
+              </Group>
+              <Text size="xl" fw={700} mt={4}>
+                {mounts.length}
+              </Text>
+              <Text size="xs" c="dimmed">
+                Remote SMB paths mounted locally
+              </Text>
+            </Paper>
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, sm: 4 }}>
+            <Paper withBorder radius="md" p="md">
+              <Group justify="space-between" align="center">
+                <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                  Persistent Mounts
+                </Text>
+                <ThemeIcon variant="light" color="grape" size="sm">
+                  <IconServer size={14} />
+                </ThemeIcon>
+              </Group>
+              <Text size="xl" fw={700} mt={4}>
+                {mounts.filter((mount) => mount.is_persistent).length}
+              </Text>
+              <Text size="xs" c="dimmed">
+                Configured to survive reboot
+              </Text>
+            </Paper>
+          </Grid.Col>
+        </Grid>
 
-      <Stack gap="xl">
-        <Box>
-            <Title order={4} mb="sm">Exported Shares</Title>
-            {shares.length === 0 ? (
-                <Text c="dimmed">No exported shares.</Text>
-            ) : (
-                <Table>
-                    <Table.Thead>
-                    <Table.Tr>
-                        <Table.Th>Name</Table.Th>
-                        <Table.Th>Path</Table.Th>
-                        <Table.Th>Access</Table.Th>
-                        <Table.Th>Actions</Table.Th>
-                    </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>{shareRows}</Table.Tbody>
-                </Table>
-            )}
-        </Box>
+        <Group justify="flex-end">
+          <Button leftSection={<IconServer size={16} />} variant="default" onClick={openMount}>
+            Mount Remote Share
+          </Button>
+          <Button leftSection={<IconPlus size={16} />} onClick={open}>
+            Create Share
+          </Button>
+        </Group>
 
-        <Box>
-            <Title order={4} mb="sm">Mounted Remote Shares</Title>
-            {mounts.length === 0 ? (
-                <Text c="dimmed">No mounted remote shares.</Text>
-            ) : (
-                <Table>
-                    <Table.Thead>
-                    <Table.Tr>
-                        <Table.Th>Remote Path</Table.Th>
-                        <Table.Th>Mount Point</Table.Th>
-                        <Table.Th>Type</Table.Th>
-                        <Table.Th>Actions</Table.Th>
-                    </Table.Tr>
-                    </Table.Thead>
-                    <Table.Tbody>{mountRows}</Table.Tbody>
-                </Table>
-            )}
-        </Box>
+        <Paper withBorder radius="lg" p="lg">
+          <Group justify="space-between" mb="sm">
+            <Box>
+              <Title order={4}>Exported Shares</Title>
+              <Text size="sm" c="dimmed">
+                Local directories exposed over SMB.
+              </Text>
+            </Box>
+            <Badge color="blue" variant="light">
+              {shares.length} total
+            </Badge>
+          </Group>
+
+          {shares.length === 0 ? (
+            <Alert icon={<IconFolder size={16} />} color="blue" variant="light" title="No exported shares">
+              Create your first share to expose local paths to SMB clients.
+            </Alert>
+          ) : (
+            <ScrollArea>
+              <Table highlightOnHover withTableBorder withColumnBorders striped>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Name</Table.Th>
+                    <Table.Th>Path</Table.Th>
+                    <Table.Th>Access</Table.Th>
+                    <Table.Th>Actions</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>{shareRows}</Table.Tbody>
+              </Table>
+            </ScrollArea>
+          )}
+        </Paper>
+
+        <Paper withBorder radius="lg" p="lg">
+          <Group justify="space-between" mb="sm">
+            <Box>
+              <Title order={4}>Mounted Remote Shares</Title>
+              <Text size="sm" c="dimmed">
+                Remote SMB endpoints mounted into local filesystem paths.
+              </Text>
+            </Box>
+            <Badge color="teal" variant="light">
+              {mounts.length} total
+            </Badge>
+          </Group>
+
+          {mounts.length === 0 ? (
+            <Alert icon={<IconShare size={16} />} color="teal" variant="light" title="No mounted remote shares">
+              Use &quot;Mount Remote Share&quot; to connect remote SMB exports to this host.
+            </Alert>
+          ) : (
+            <ScrollArea>
+              <Table highlightOnHover withTableBorder withColumnBorders striped>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th>Remote Path</Table.Th>
+                    <Table.Th>Mount Point</Table.Th>
+                    <Table.Th>Type</Table.Th>
+                    <Table.Th>Actions</Table.Th>
+                  </Table.Tr>
+                </Table.Thead>
+                <Table.Tbody>{mountRows}</Table.Tbody>
+              </Table>
+            </ScrollArea>
+          )}
+        </Paper>
       </Stack>
 
       {/* Create Share Modal */}
-      <Modal opened={opened} onClose={close} title="Create SMB Share">
+      <Modal opened={opened} onClose={close} title="Create SMB Share" radius="lg">
         <Stack>
+          <Text size="sm" c="dimmed">
+            Define a local path and access settings to publish a new Samba share.
+          </Text>
           <TextInput
             label="Name"
             placeholder="share_name"
@@ -305,15 +414,23 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
             onChange={(e) => setFormData({ ...formData, browsable: e.currentTarget.checked })}
           />
           <Checkbox label="Guest OK" checked={formData.guest_ok} onChange={(e) => setFormData({ ...formData, guest_ok: e.currentTarget.checked })} />
-          <Button onClick={handleCreate} loading={creating} mt="md">
-            Create
-          </Button>
+          <Group justify="flex-end" mt="md">
+            <Button variant="default" onClick={close}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreate} loading={creating}>
+              Create Share
+            </Button>
+          </Group>
         </Stack>
       </Modal>
 
       {/* Mount Remote Share Modal */}
-      <Modal opened={mountOpened} onClose={closeMount} title="Mount Remote SMB Share">
+      <Modal opened={mountOpened} onClose={closeMount} title="Mount Remote SMB Share" radius="lg">
         <Stack>
+            <Text size="sm" c="dimmed">
+              Connect a remote SMB export to a local mount path. Credentials are optional depending on remote policy.
+            </Text>
             <TextInput 
                 label="Remote Path" 
                 placeholder="//server/share" 
@@ -346,9 +463,14 @@ export function SMBList({ shares, mounts }: { shares: SMBShare[]; mounts: SMBMou
                 checked={mountForm.persist}
                 onChange={(e) => setMountForm({ ...mountForm, persist: e.currentTarget.checked })}
             />
-            <Button onClick={handleMount} loading={mounting} mt="md">
-                Mount
-            </Button>
+            <Group justify="flex-end" mt="md">
+              <Button variant="default" onClick={closeMount}>
+                Cancel
+              </Button>
+              <Button onClick={handleMount} loading={mounting}>
+                Mount Share
+              </Button>
+            </Group>
         </Stack>
       </Modal>
     </Box>
