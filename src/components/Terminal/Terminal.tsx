@@ -37,7 +37,7 @@ export const Terminal: React.FC<TerminalProps> = ({
   onClose,
   title = "Terminal",
   mode,
-  height = 500,
+  height = "100%",
   showStatusBar = true,
   readOnly,
 }) => {
@@ -275,7 +275,7 @@ export const Terminal: React.FC<TerminalProps> = ({
   };
 
   return (
-    <Card shadow="sm" padding="0" radius="md" withBorder>
+    <Card shadow="sm" padding="0" radius="md" withBorder style={{ height: heightStyle, display: "flex", flexDirection: "column" }}>
       {showStatusBar && (
         <Box
           p="xs"
@@ -324,7 +324,8 @@ export const Terminal: React.FC<TerminalProps> = ({
       <Box
         ref={terminalRef}
         style={{
-          height: heightStyle,
+          flex: 1,
+          minHeight: 0,
           padding: "8px",
           overflow: "hidden",
           background: "#0f1117",

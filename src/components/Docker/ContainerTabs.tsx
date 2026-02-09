@@ -1,20 +1,6 @@
 "use client";
 import { parseCommand } from "@/lib/commandParser";
-import {
-  Tabs,
-  Card,
-  Text,
-  Badge,
-  Stack,
-  Code,
-  SimpleGrid,
-  Loader,
-  Center,
-  Button,
-  Group,
-  ScrollArea,
-  rem,
-} from "@mantine/core";
+import { Tabs, Card, Text, Badge, Stack, Code, SimpleGrid, Loader, Center, Button, Group, ScrollArea, Box, rem } from "@mantine/core";
 import { Highlight, themes } from "prism-react-renderer";
 import { IconTerminal, IconCopy, IconCheck, IconInfoCircle, IconLogs, IconBrandDocker, IconBrackets } from "@tabler/icons-react";
 import { useState, useEffect, useMemo } from "react";
@@ -55,7 +41,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
   const [shellError, setShellError] = useState<string | null>(null);
   const searchParams = useSearchParams();
   const router = useRouter();
-  
+
   // Compose YAML State
   const [composeYaml, setComposeYaml] = useState<string>("");
   const [isLoadingYaml, setIsLoadingYaml] = useState(false);
@@ -182,12 +168,15 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
   const handleCopy = () => {
     const textToCopy = composeYaml;
     if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(textToCopy).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-      }).catch((err) => {
-        console.error('Failed to copy: ', err);
-      });
+      navigator.clipboard
+        .writeText(textToCopy)
+        .then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        })
+        .catch((err) => {
+          console.error("Failed to copy: ", err);
+        });
     } else {
       // Fallback
       const textArea = document.createElement("textarea");
@@ -199,11 +188,11 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
       textArea.focus();
       textArea.select();
       try {
-        document.execCommand('copy');
+        document.execCommand("copy");
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       } catch (err) {
-        console.error('Fallback: Oops, unable to copy', err);
+        console.error("Fallback: Oops, unable to copy", err);
       }
       document.body.removeChild(textArea);
     }
@@ -388,32 +377,40 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
         </Tabs.Panel>
 
         <Tabs.Panel value="shell">
-          {container.State !== "running" ? (
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Text fw={500} size="lg" mb="md">
-                Shell Access
-              </Text>
-              <Text c="dimmed">Container must be running to access shell.</Text>
-            </Card>
-          ) : isLoadingShell ? (
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Center h={200}>
-                <Stack align="center" gap="md">
-                  <Loader size="md" />
-                  <Text c="dimmed">Creating shell session...</Text>
-                </Stack>
-              </Center>
-            </Card>
-          ) : shellError ? (
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Text fw={500} size="lg" mb="md">
-                Shell Access
-              </Text>
-              <Text c="red">{shellError}</Text>
-            </Card>
-          ) : sessionId ? (
-            <Terminal sessionId={sessionId} mode="interactive" onClose={handleCloseShell} title={`Shell - ${container.Name || container.Id.substring(0, 12)}`} />
-          ) : null}
+          <Box h={700} style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
+            {container.State !== "running" ? (
+              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ flex: 1 }}>
+                <Text fw={500} size="lg" mb="md">
+                  Shell Access
+                </Text>
+                <Text c="dimmed">Container must be running to access shell.</Text>
+              </Card>
+            ) : isLoadingShell ? (
+              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ flex: 1 }}>
+                <Center h={200}>
+                  <Stack align="center" gap="md">
+                    <Loader size="md" />
+                    <Text c="dimmed">Creating shell session...</Text>
+                  </Stack>
+                </Center>
+              </Card>
+            ) : shellError ? (
+              <Card shadow="sm" padding="lg" radius="md" withBorder style={{ flex: 1 }}>
+                <Text fw={500} size="lg" mb="md">
+                  Shell Access
+                </Text>
+                <Text c="red">{shellError}</Text>
+              </Card>
+            ) : sessionId ? (
+              <Terminal
+                sessionId={sessionId}
+                mode="interactive"
+                onClose={handleCloseShell}
+                title={`Shell - ${container.Name || container.Id.substring(0, 12)}`}
+                height="100%"
+              />
+            ) : null}
+          </Box>
         </Tabs.Panel>
 
         <Tabs.Panel value="compose">
@@ -436,7 +433,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
                   {({ style, tokens, getLineProps, getTokenProps }) => (
                     <pre style={{ ...style, margin: 0, padding: "var(--mantine-spacing-md)", fontFamily: "monospace", fontSize: "medium" }}>
                       {tokens.map((line, i) => (
-                        <div key={i} {...getLineProps({ line }) }>
+                        <div key={i} {...getLineProps({ line })}>
                           {line.map((token, key) => (
                             <span key={key} {...getTokenProps({ token })} />
                           ))}
