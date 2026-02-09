@@ -230,10 +230,13 @@ export const Terminal: React.FC<TerminalProps> = ({
       if (!isReadOnly) {
         dataDisposable = term.onData((data) => {
           if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+          // Some shell backends expect Ctrl+H (\b) instead of DEL (\x7f) for backspace.
+          // Normalize this so Backspace works reliably in interactive mode.
+          const normalizedInput = data === "\x7f" ? "\b" : data;
           wsRef.current.send(
             JSON.stringify({
               type: "input",
-              data,
+              data: normalizedInput,
             }),
           );
         });
