@@ -75,7 +75,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
             working_dir: "/",
           });
           setSessionId(session.session_id);
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Failed to create shell session:", error);
           setShellError(error instanceof Error ? error.message : "Failed to create shell session");
         } finally {
@@ -146,7 +146,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
 
             setComposeYaml(yaml.dump(composeObj));
           }
-        } catch (error: any) {
+        } catch (error: unknown) {
           console.error("Failed to fetch container configuration:", error);
           setComposeYaml("# Failed to generate Docker Compose YAML");
         } finally {
@@ -412,7 +412,7 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
               <Text c="red">{shellError}</Text>
             </Card>
           ) : sessionId ? (
-            <Terminal sessionId={sessionId} onClose={handleCloseShell} title={`Shell - ${container.Name || container.Id.substring(0, 12)}`} />
+            <Terminal sessionId={sessionId} mode="interactive" onClose={handleCloseShell} title={`Shell - ${container.Name || container.Id.substring(0, 12)}`} />
           ) : null}
         </Tabs.Panel>
 

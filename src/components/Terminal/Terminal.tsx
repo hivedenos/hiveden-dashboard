@@ -1,203 +1,129 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo } from "react";
-import type { Terminal as XTerm } from "xterm";
-import type { FitAddon } from "@xterm/addon-fit";
-import { Card, Badge, Group, ActionIcon, Text, Box } from "@mantine/core";
-import { IconX } from "@tabler/icons-react";
 import { connectToSession } from "@/lib/shellClient";
+import { ActionIcon, Badge, Box, Card, Group, Text } from "@mantine/core";
+import { IconTrash, IconX } from "@tabler/icons-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import type { FitAddon } from "@xterm/addon-fit";
+import type { Terminal as XTerm } from "xterm";
 import "xterm/css/xterm.css";
+
+type TerminalMode = "interactive" | "stream";
+type ConnectionState = "connecting" | "connected" | "disconnected" | "error" | "completed";
+type WsMessage = {
+  type?: string;
+  message?: string;
+  data?: {
+    output?: string;
+    exit_code?: number;
+    status?: string;
+  };
+};
 
 interface TerminalProps {
   sessionId?: string;
   socketFactory?: () => WebSocket;
   onClose?: () => void;
   title?: string;
+  mode?: TerminalMode;
+  height?: number | string;
+  showStatusBar?: boolean;
+  readOnly?: boolean;
 }
 
-export const Terminal: React.FC<TerminalProps> = ({ sessionId, socketFactory, onClose, title = "Terminal" }) => {
+export const Terminal: React.FC<TerminalProps> = ({
+  sessionId,
+  socketFactory,
+  onClose,
+  title = "Terminal",
+  mode,
+  height = 500,
+  showStatusBar = true,
+  readOnly,
+}) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
-  const [isConnected, setIsConnected] = useState(false);
+  const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
+
+  const effectiveMode = useMemo<TerminalMode>(() => {
+    if (mode) return mode;
+    if (sessionId) return "interactive";
+    return "stream";
+  }, [mode, sessionId]);
+
+  const isReadOnly = readOnly ?? effectiveMode === "stream";
+  const heightStyle = typeof height === "number" ? `${height}px` : height;
 
   useEffect(() => {
     if (!terminalRef.current) return;
     if (!sessionId && !socketFactory) return;
 
-    let term: XTerm;
-    let fitAddon: FitAddon;
-    let ws: WebSocket;
+    let disposed = false;
+    let dataDisposable: { dispose: () => void } | null = null;
+    let resizeObserver: ResizeObserver | null = null;
+    let removeWindowResize: (() => void) | null = null;
+
+    setConnectionState("connecting");
 
     const initTerminal = async () => {
-      const { Terminal: XTermConstructor } = await import("xterm");
-      const { FitAddon: FitAddonConstructor } = await import("@xterm/addon-fit");
-      const { WebLinksAddon: WebLinksAddonConstructor } = await import("@xterm/addon-web-links");
+      const [{ Terminal: XTermConstructor }, { FitAddon: FitAddonConstructor }, { WebLinksAddon: WebLinksAddonConstructor }] = await Promise.all([
+        import("xterm"),
+        import("@xterm/addon-fit"),
+        import("@xterm/addon-web-links"),
+      ]);
+      if (disposed || !terminalRef.current) return;
 
-      // Initialize xterm.js
-      term = new XTermConstructor({
+      const term = new XTermConstructor({
         cursorBlink: true,
-        convertEol: true,
+        cursorStyle: "block",
         fontSize: 14,
-        fontFamily: 'Menlo, Monaco, "Courier New", monospace',
+        lineHeight: 1.3,
+        letterSpacing: 0.2,
+        fontFamily: '"JetBrains Mono", "Fira Code", Menlo, Monaco, Consolas, "Courier New", monospace',
+        scrollback: 6000,
+        convertEol: effectiveMode === "stream",
+        disableStdin: isReadOnly,
         theme: {
-          background: "#1e1e1e",
-          foreground: "#f0f0f0",
-          cursor: "#4caf50",
-          black: "#000000",
-          red: "#e06c75",
-          green: "#98c379",
-          yellow: "#d19a66",
-          blue: "#61afef",
-          magenta: "#c678dd",
-          cyan: "#56b6c2",
-          white: "#abb2bf",
-          brightBlack: "#5c6370",
-          brightRed: "#e06c75",
-          brightGreen: "#98c379",
-          brightYellow: "#d19a66",
-          brightBlue: "#61afef",
-          brightMagenta: "#c678dd",
-          brightCyan: "#56b6c2",
-          brightWhite: "#ffffff",
+          background: "#0f1117",
+          foreground: "#e6edf3",
+          cursor: "#8b949e",
+          selectionBackground: "#264f78",
+          black: "#0f1117",
+          red: "#ff7b72",
+          green: "#3fb950",
+          yellow: "#d29922",
+          blue: "#58a6ff",
+          magenta: "#bc8cff",
+          cyan: "#39c5cf",
+          white: "#b1bac4",
+          brightBlack: "#6e7681",
+          brightRed: "#ffa198",
+          brightGreen: "#56d364",
+          brightYellow: "#e3b341",
+          brightBlue: "#79c0ff",
+          brightMagenta: "#d2a8ff",
+          brightCyan: "#56d4dd",
+          brightWhite: "#f0f6fc",
         },
-        allowProposedApi: true,
       });
 
-      // Add addons
-      fitAddon = new FitAddonConstructor();
+      const fitAddon = new FitAddonConstructor();
       const webLinksAddon = new WebLinksAddonConstructor();
-
       term.loadAddon(fitAddon);
       term.loadAddon(webLinksAddon);
-
-      // Open terminal
-      if (terminalRef.current) {
-        term.open(terminalRef.current);
-        fitAddon.fit();
-      }
+      term.open(terminalRef.current);
+      term.focus();
 
       xtermRef.current = term;
       fitAddonRef.current = fitAddon;
 
-      // Connect to WebSocket
-      ws = socketFactory ? socketFactory() : connectToSession(sessionId!);
-
-      const commandBuffer = { current: "" };
-      const prompt = title?.toLowerCase().includes("install") ? "" : "# ";
-
-      ws.onopen = () => {
-        setIsConnected(true);
-        term.writeln("\x1b[1;32m● Connected to shell session\x1b[0m");
-        if (prompt) {
-          term.write(`\r\n${prompt}`);
-        }
-      };
-
-      ws.onmessage = async (event) => {
-        let rawData = event.data;
-
-        // Handle Blob/ArrayBuffer if necessary
-        if (rawData instanceof Blob) {
-          rawData = await rawData.text();
-        }
-
-        let message;
-        try {
-          message = JSON.parse(rawData);
-        } catch (error) {
-          // If parsing fails, assume it's raw text output
-          if (typeof rawData === "string") {
-            term.write(rawData);
-          }
-          return;
-        }
-
-        if (message.type === "output") {
-          term.writeln(message.data.output);
-        } else if (message.type === "log") {
-          // Handle job logs
-          term.writeln(message.data.output);
-        } else if (message.type === "error") {
-          term.writeln(`\x1b[1;31mError: ${message.message}\x1b[0m`);
-        } else if (message.type === "exit") {
-          term.writeln("");
-          term.writeln(`\x1b[1;33m● Session ended with exit code: ${message.data.exit_code}\x1b[0m`);
-          setIsConnected(false);
-        } else if (message.type === "job_completed") {
-          term.writeln("");
-          const color = message.data.status === "completed" ? "\x1b[1;32m" : "\x1b[1;31m";
-          term.writeln(`${color}● Job ${message.data.status} (Exit Code: ${message.data.exit_code})\x1b[0m`);
-          setIsConnected(false);
-          // Keep the socket open for a moment or let the user close it?
-          // The requirement says "Close connection when job_completed message is received".
-          // setIsConnected(false) updates the UI badge.
-          // We might want to actually close the socket if the server doesn't.
-          ws.close();
-        }
-      };
-
-      ws.onclose = () => {
-        setIsConnected(false);
-        term.writeln("");
-        term.writeln("\x1b[1;31m○ Disconnected from shell session\x1b[0m");
-      };
-
-      ws.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        setIsConnected(false);
-        term.writeln("");
-        term.writeln("\x1b[1;31m✗ Connection error\x1b[0m");
-      };
-
+      const ws = socketFactory ? socketFactory() : connectToSession(sessionId!);
       wsRef.current = ws;
 
-      // Handle terminal input with local buffering
-      term.onData((data) => {
-        if (ws.readyState !== WebSocket.OPEN) return;
-
-        const code = data.charCodeAt(0);
-
-        // Enter (13)
-        if (code === 13) {
-          term.write("\r\n");
-          // Send the command followed by a newline
-          ws.send(
-            JSON.stringify({
-              type: "input",
-              data: commandBuffer.current + "\r",
-            }),
-          );
-          commandBuffer.current = "";
-          return;
-        }
-
-        // Backspace (127)
-        if (code === 127) {
-          if (commandBuffer.current.length > 0) {
-            commandBuffer.current = commandBuffer.current.slice(0, -1);
-            term.write("\b \b");
-          }
-          return;
-        }
-
-        // Printable characters (basic range check, can be expanded for utf8)
-        if (code >= 32) {
-          commandBuffer.current += data;
-          term.write(data);
-        }
-      });
-    };
-
-    initTerminal();
-
-    // Handle window resize
-    const handleResize = () => {
-      if (fitAddonRef.current) {
-        fitAddonRef.current.fit();
-      }
-      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN && xtermRef.current) {
+      const sendResize = () => {
+        if (!xtermRef.current || !wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
         wsRef.current.send(
           JSON.stringify({
             type: "resize",
@@ -205,48 +131,199 @@ export const Terminal: React.FC<TerminalProps> = ({ sessionId, socketFactory, on
             rows: xtermRef.current.rows,
           }),
         );
+      };
+
+      const fitAndResize = () => {
+        try {
+          fitAddon.fit();
+          sendResize();
+        } catch {
+          // Ignore intermittent fitting failures during layout transitions.
+        }
+      };
+
+      fitAndResize();
+
+      const handleWindowResize = () => fitAndResize();
+      window.addEventListener("resize", handleWindowResize);
+      removeWindowResize = () => window.removeEventListener("resize", handleWindowResize);
+
+      if (typeof ResizeObserver !== "undefined" && terminalRef.current) {
+        resizeObserver = new ResizeObserver(() => fitAndResize());
+        resizeObserver.observe(terminalRef.current);
+      }
+
+      ws.onopen = () => {
+        if (disposed) return;
+        setConnectionState("connected");
+        fitAndResize();
+      };
+
+      ws.onmessage = async (event) => {
+        if (disposed || !xtermRef.current) return;
+
+        let payload: string | null = null;
+        const rawData = event.data;
+
+        if (typeof rawData === "string") {
+          payload = rawData;
+        } else if (rawData instanceof Blob) {
+          payload = await rawData.text();
+        } else if (rawData instanceof ArrayBuffer) {
+          payload = new TextDecoder().decode(rawData);
+        }
+
+        if (!payload) return;
+
+        let message: WsMessage | null = null;
+        try {
+          message = JSON.parse(payload) as WsMessage;
+        } catch {
+          xtermRef.current.write(payload);
+          return;
+        }
+
+        if (message.type === "output" || message.type === "log") {
+          const outputText = typeof message.data?.output === "string" ? message.data.output : "";
+          if (outputText) {
+            xtermRef.current.write(outputText);
+          }
+          return;
+        }
+
+        if (message.type === "error") {
+          const errorText = message.message ? `Error: ${message.message}` : "Error";
+          xtermRef.current.writeln(`\x1b[1;31m${errorText}\x1b[0m`);
+          setConnectionState("error");
+          return;
+        }
+
+        if (message.type === "exit") {
+          xtermRef.current.writeln(`\r\n\x1b[1;33mSession ended (exit: ${message.data?.exit_code ?? "unknown"})\x1b[0m`);
+          setConnectionState("disconnected");
+          return;
+        }
+
+        if (message.type === "job_completed") {
+          const status = message.data?.status || "completed";
+          const exitCode = message.data?.exit_code ?? "unknown";
+          const color = status === "completed" ? "\x1b[1;32m" : "\x1b[1;31m";
+          xtermRef.current.writeln(`\r\n${color}Job ${status} (Exit Code: ${exitCode})\x1b[0m`);
+          setConnectionState("completed");
+          if (effectiveMode === "stream") {
+            ws.close();
+          }
+        }
+      };
+
+      ws.onclose = () => {
+        if (disposed) return;
+        setConnectionState((prev) => (prev === "completed" ? "completed" : "disconnected"));
+      };
+
+      ws.onerror = () => {
+        if (disposed) return;
+        setConnectionState("error");
+      };
+
+      if (!isReadOnly) {
+        dataDisposable = term.onData((data) => {
+          if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
+          wsRef.current.send(
+            JSON.stringify({
+              type: "input",
+              data,
+            }),
+          );
+        });
       }
     };
 
-    window.addEventListener("resize", handleResize);
+    initTerminal();
 
-    // Cleanup
     return () => {
-      window.removeEventListener("resize", handleResize);
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-      if (xtermRef.current) {
-        xtermRef.current.dispose();
-      }
+      disposed = true;
+      if (removeWindowResize) removeWindowResize();
+      if (resizeObserver) resizeObserver.disconnect();
+      if (dataDisposable) dataDisposable.dispose();
+      if (wsRef.current) wsRef.current.close();
+      if (xtermRef.current) xtermRef.current.dispose();
+      wsRef.current = null;
+      xtermRef.current = null;
+      fitAddonRef.current = null;
     };
-  }, [sessionId, socketFactory, title]);
+  }, [sessionId, socketFactory, effectiveMode, isReadOnly]);
+
+  const statusColor: Record<ConnectionState, string> = {
+    connecting: "yellow",
+    connected: "green",
+    disconnected: "gray",
+    error: "red",
+    completed: "teal",
+  };
+
+  const statusLabel: Record<ConnectionState, string> = {
+    connecting: "Connecting",
+    connected: "Connected",
+    disconnected: "Disconnected",
+    error: "Error",
+    completed: "Completed",
+  };
 
   return (
     <Card shadow="sm" padding="0" radius="md" withBorder>
-      <Box p="xs" style={{ borderBottom: "1px solid var(--mantine-color-gray-3)" }}>
-        <Group justify="space-between">
-          <Group gap="xs">
-            <Text size="sm" fw={500}>
-              {title}
-            </Text>
-            <Badge size="sm" color={isConnected ? "green" : "gray"} variant="dot">
-              {isConnected ? "Connected" : "Disconnected"}
-            </Badge>
+      {showStatusBar && (
+        <Box
+          p="xs"
+          style={{
+            borderBottom: "1px solid var(--mantine-color-default-border)",
+            background: "linear-gradient(180deg, #1b2028 0%, #151a21 100%)",
+          }}
+        >
+          <Group justify="space-between">
+            <Group gap="sm">
+              <Group gap={6}>
+                <Box w={10} h={10} style={{ borderRadius: "999px", backgroundColor: "#ff5f56" }} />
+                <Box w={10} h={10} style={{ borderRadius: "999px", backgroundColor: "#ffbd2e" }} />
+                <Box w={10} h={10} style={{ borderRadius: "999px", backgroundColor: "#27c93f" }} />
+              </Group>
+              <Text size="sm" fw={600} c="gray.2">
+                {title}
+              </Text>
+              <Badge size="sm" color={statusColor[connectionState]} variant="dot">
+                {statusLabel[connectionState]}
+              </Badge>
+              <Badge size="sm" variant="light" color="gray">
+                {effectiveMode === "interactive" ? "Shell" : "Stream"}
+              </Badge>
+            </Group>
+            <Group gap="xs">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                onClick={() => xtermRef.current?.clear()}
+                aria-label="Clear terminal"
+                title="Clear"
+              >
+                <IconTrash size={15} />
+              </ActionIcon>
+              {onClose && (
+                <ActionIcon variant="subtle" color="gray" onClick={onClose} size="sm" aria-label="Close terminal" title="Close">
+                  <IconX size={16} />
+                </ActionIcon>
+              )}
+            </Group>
           </Group>
-          {onClose && (
-            <ActionIcon variant="subtle" color="gray" onClick={onClose} size="sm">
-              <IconX size={16} />
-            </ActionIcon>
-          )}
-        </Group>
-      </Box>
+        </Box>
+      )}
       <Box
         ref={terminalRef}
         style={{
-          height: "500px",
+          height: heightStyle,
           padding: "8px",
           overflow: "hidden",
+          background: "#0f1117",
         }}
       />
     </Card>

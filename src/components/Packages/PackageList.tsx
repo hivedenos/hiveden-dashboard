@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { PackageStatus, PackageOperation } from "@/lib/client";
-import { Card, Text, Badge, Group, Button, Stack, Modal, ThemeIcon, SimpleGrid, ActionIcon, Tooltip } from "@mantine/core";
-import { IconCheck, IconAlertTriangle, IconDownload, IconTrash, IconTerminal, IconRefresh } from "@tabler/icons-react";
+import { Card, Text, Badge, Group, Button, Modal, ThemeIcon, SimpleGrid } from "@mantine/core";
+import { IconCheck, IconAlertTriangle, IconDownload, IconTrash } from "@tabler/icons-react";
 import { Terminal } from "@/components/Terminal/Terminal";
 import { connectToPackageInstall } from "@/lib/shellClient";
 import { useRouter } from "next/navigation";
@@ -47,6 +47,7 @@ export function PackageList({ initialPackages }: PackageListProps) {
           <div style={{ height: 500 }}>
             <Terminal
               socketFactory={() => connectToPackageInstall(installingPackage.name)}
+              mode="stream"
               onClose={handleCloseModal}
               title={`Installing ${installingPackage.name}...`}
             />

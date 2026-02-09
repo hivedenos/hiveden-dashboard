@@ -223,7 +223,7 @@ export function RaidManagement({ raidId, allDisks }: RaidManagementProps) {
 
       {/* Terminal Modal for Job Progress */}
       <Modal opened={isTerminalOpen} onClose={() => setIsTerminalOpen(false)} title="Adding Disk to RAID" size="xl" closeOnClickOutside={false}>
-        <Terminal title="Operation Log" socketFactory={socketFactory} onClose={() => setIsTerminalOpen(false)} />
+        <Terminal title="Operation Log" socketFactory={socketFactory} mode="stream" onClose={() => setIsTerminalOpen(false)} />
       </Modal>
     </Stack>
   );

@@ -495,7 +495,7 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
         size="xl"
         closeOnClickOutside={false}
       >
-        <Terminal title="Configuration Log" socketFactory={socketFactory} onClose={() => setIsTerminalOpen(false)} />
+        <Terminal title="Configuration Log" socketFactory={socketFactory} mode="stream" onClose={() => setIsTerminalOpen(false)} />
       </Modal>
 
       {/* Create Share Modal */}
