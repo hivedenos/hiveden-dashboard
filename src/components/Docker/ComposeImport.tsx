@@ -2,8 +2,8 @@
 
 import { ContainerFormState } from "@/hooks/useContainerForm";
 import { EnvVar, Mount, Port } from "@/lib/client";
-import { Alert, Box, Button, Group, Paper, Stack, Textarea, Title } from "@mantine/core";
-import { IconAlertCircle } from "@tabler/icons-react";
+import { Alert, Badge, Box, Button, Grid, Group, List, Paper, Stack, Text, Textarea, ThemeIcon, Title } from "@mantine/core";
+import { IconAlertCircle, IconBolt, IconCheck, IconInfoCircle, IconRocket } from "@tabler/icons-react";
 import yaml from "js-yaml";
 import { useState } from "react";
 
@@ -33,7 +33,7 @@ export function ComposeYamlInput({ onParsed, onCancel }: ComposeYamlInputProps) 
   const handleParse = () => {
     setError(null);
     try {
-      const doc = yaml.load(yamlContent) as any;
+      const doc = yaml.load(yamlContent) as DockerComposeConfig | undefined;
       if (!doc || !doc.services) {
         throw new Error('Invalid Docker Compose file: No "services" defined.');
       }
@@ -151,36 +151,115 @@ export function ComposeYamlInput({ onParsed, onCancel }: ComposeYamlInputProps) 
       });
 
       onParsed(parsedContainers);
-    } catch (e: any) {
-      setError(e.message || "Failed to parse YAML");
+    } catch (e: unknown) {
+      if (e instanceof Error) {
+        setError(e.message);
+        return;
+      }
+      setError("Failed to parse YAML");
     }
   };
 
   return (
     <Box h="100%">
-      <Title order={3} mb="lg">
-        Import from Docker Compose
-      </Title>
+      <Stack gap="sm" mb="lg">
+        <Group justify="space-between" align="center">
+          <Title order={3}>Import from Docker Compose</Title>
+          <Badge variant="light" color="blue">
+            Step 1 of 3
+          </Badge>
+        </Group>
+        <Text size="sm" c="dimmed">
+          Paste your Compose YAML and we will prefill container settings including environment variables, ports, volumes, and labels.
+        </Text>
+      </Stack>
 
       {error && (
-        <Alert icon={<IconAlertCircle size={16} />} title="Error" color="red" mb="md">
+        <Alert icon={<IconAlertCircle size={16} />} title="Could not parse Compose file" color="red" mb="md" radius="md">
           {error}
         </Alert>
       )}
 
-      <Paper p="md" withBorder radius="md">
-        <Stack justify="space-between">
-          <Textarea label="Docker Compose YAML" description="Paste your docker-compose.yml content here." placeholder={`services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"\n  db:\n    image: postgres:15`} minRows={20} maxRows={20} value={yamlContent} autosize onChange={(event) => setYamlContent(event.currentTarget.value)} style={{ fontFamily: "monospace" }} />
+      <Paper p="lg" withBorder radius="lg">
+        <Grid gutter="lg">
+          <Grid.Col span={{ base: 12, md: 4 }}>
+            <Stack gap="md">
+              <Paper withBorder radius="md" p="md">
+                <Group gap="xs" mb="xs">
+                  <ThemeIcon size="sm" variant="light" color="blue">
+                    <IconInfoCircle size={14} />
+                  </ThemeIcon>
+                  <Text fw={600} size="sm">
+                    Import guidance
+                  </Text>
+                </Group>
+                <List size="sm" spacing={8}>
+                  <List.Item icon={<IconCheck size={14} />}>Compose file must include a top-level `services` section</List.Item>
+                  <List.Item icon={<IconCheck size={14} />}>Each service should define at least `image` and optional `ports`, `environment`, `volumes`</List.Item>
+                  <List.Item icon={<IconCheck size={14} />}>After parsing, review each container before deployment</List.Item>
+                </List>
+              </Paper>
 
-          <Group justify="flex-end">
-            <Button variant="default" onClick={onCancel}>
-              Cancel
-            </Button>
-            <Button onClick={handleParse} disabled={!yamlContent.trim()}>
-              Parse
-            </Button>
-          </Group>
-        </Stack>
+              <Paper withBorder radius="md" p="md">
+                <Group gap="xs" mb="xs">
+                  <ThemeIcon size="sm" variant="light" color="teal">
+                    <IconBolt size={14} />
+                  </ThemeIcon>
+                  <Text fw={600} size="sm">
+                    Parsed automatically
+                  </Text>
+                </Group>
+                <Group gap={6}>
+                  <Badge variant="light" color="gray">
+                    services
+                  </Badge>
+                  <Badge variant="light" color="gray">
+                    env
+                  </Badge>
+                  <Badge variant="light" color="gray">
+                    ports
+                  </Badge>
+                  <Badge variant="light" color="gray">
+                    volumes
+                  </Badge>
+                  <Badge variant="light" color="gray">
+                    labels
+                  </Badge>
+                </Group>
+              </Paper>
+            </Stack>
+          </Grid.Col>
+
+          <Grid.Col span={{ base: 12, md: 8 }}>
+            <Stack justify="space-between" h="100%">
+              <Textarea
+                label="Docker Compose YAML"
+                description="Paste your docker-compose.yml content."
+                placeholder={`services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"\n  db:\n    image: postgres:15`}
+                minRows={20}
+                maxRows={24}
+                value={yamlContent}
+                autosize
+                onChange={(event) => setYamlContent(event.currentTarget.value)}
+                style={{ fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace" }}
+              />
+
+              <Group justify="space-between" mt="md">
+                <Text size="xs" c="dimmed">
+                  Nothing is deployed in this step. Parsing only validates and maps your input.
+                </Text>
+                <Group>
+                  <Button variant="default" onClick={onCancel}>
+                    Cancel
+                  </Button>
+                  <Button leftSection={<IconRocket size={16} />} onClick={handleParse} disabled={!yamlContent.trim()}>
+                    Validate & Continue
+                  </Button>
+                </Group>
+              </Group>
+            </Stack>
+          </Grid.Col>
+        </Grid>
       </Paper>
     </Box>
   );
