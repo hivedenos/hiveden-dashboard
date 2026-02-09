@@ -2,6 +2,7 @@
 
 import { fetchMetric, MetricResult } from "@/actions/metrics";
 import { useEffect, useState } from "react";
+import { resolvePrometheusUrl } from "@/lib/prometheus";
 
 export interface BaseMetricProps {
   title?: string;
@@ -40,21 +41,7 @@ export const useMetricData = (props: BaseMetricProps, history: boolean) => {
       setLoading(true);
       setError(null);
       try {
-        // let url = prometheusUrl;
-        let url = "http://192.168.0.10:9090";
-        if (!url) {
-          const protocol = window.location.protocol;
-          const hostname = window.location.hostname;
-          let targetDomain = hostname;
-          if (hostname.startsWith("dashboard.")) {
-            targetDomain = hostname.replace("dashboard.", "prometheus.");
-          } else if (hostname.startsWith("www.")) {
-            targetDomain = hostname.replace("www.", "prometheus.");
-          } else {
-            targetDomain = `prometheus.${hostname}`;
-          }
-          url = `${protocol}//${targetDomain}`;
-        }
+        const url = resolvePrometheusUrl(prometheusUrl);
 
         const safeName = containerName || ".*";
         const finalQuery = query.replace(/\$container/g, safeName);

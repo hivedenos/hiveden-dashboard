@@ -5,11 +5,30 @@ interface MetricPoint {
   value: number;
 }
 
+export interface MetricVectorSample {
+  labels: Record<string, string>;
+  value: number;
+}
+
 export interface MetricResult {
   currentValue: number;
   history?: MetricPoint[];
   status: 'success' | 'error';
   error?: string;
+}
+
+export interface MetricVectorResult {
+  samples: MetricVectorSample[];
+  status: 'success' | 'error';
+  error?: string;
+}
+
+function normalizePrometheusUrl(prometheusUrl: string): string {
+  let baseUrl = prometheusUrl;
+  if (!baseUrl.startsWith('http')) {
+    baseUrl = `https://${baseUrl}`;
+  }
+  return baseUrl.replace(/\/$/, '');
 }
 
 export async function fetchMetric(
@@ -18,13 +37,7 @@ export async function fetchMetric(
   rangeMinutes: number = 0
 ): Promise<MetricResult> {
   try {
-    // Ensure URL has protocol
-    let baseUrl = prometheusUrl;
-    if (!baseUrl.startsWith('http')) {
-      baseUrl = `https://${baseUrl}`;
-    }
-    // Remove trailing slash
-    baseUrl = baseUrl.replace(/\/$/, '');
+    const baseUrl = normalizePrometheusUrl(prometheusUrl);
 
     // 1. Fetch Current Value (Instant Query)
     const instantUrl = new URL(`${baseUrl}/api/v1/query`);
@@ -89,6 +102,55 @@ export async function fetchMetric(
         status: 'error',
         currentValue: 0,
         error: error.message || 'Unknown error'
+    };
+  }
+}
+
+export async function fetchMetricVector(
+  prometheusUrl: string,
+  query: string
+): Promise<MetricVectorResult> {
+  try {
+    const baseUrl = normalizePrometheusUrl(prometheusUrl);
+    const instantUrl = new URL(`${baseUrl}/api/v1/query`);
+    instantUrl.searchParams.append('query', query);
+
+    const response = await fetch(instantUrl.toString(), { cache: 'no-store' });
+    if (!response.ok) {
+      throw new Error(`Prometheus returned ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (data.status !== 'success') {
+      throw new Error(`Prometheus query failed: ${data.errorType} - ${data.error}`);
+    }
+
+    const samples: MetricVectorSample[] = Array.isArray(data.data?.result)
+      ? data.data.result
+          .map((entry: any) => {
+            const rawValue = entry?.value?.[1];
+            const numericValue = Number.parseFloat(rawValue);
+            if (!Number.isFinite(numericValue)) {
+              return null;
+            }
+            return {
+              labels: (entry?.metric || {}) as Record<string, string>,
+              value: numericValue,
+            };
+          })
+          .filter((entry: MetricVectorSample | null): entry is MetricVectorSample => entry !== null)
+      : [];
+
+    return {
+      status: 'success',
+      samples,
+    };
+  } catch (error: any) {
+    console.error('Metric vector fetch error:', error);
+    return {
+      status: 'error',
+      samples: [],
+      error: error.message || 'Unknown error',
     };
   }
 }

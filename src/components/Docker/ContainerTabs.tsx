@@ -1,25 +1,22 @@
 "use client";
 import { parseCommand } from "@/lib/commandParser";
 import {
-  SegmentedControl,
+  Tabs,
   Card,
   Text,
   Badge,
   Stack,
   Code,
   SimpleGrid,
-  Box,
-  Tooltip,
   Loader,
   Center,
   Button,
-  ActionIcon,
-  Textarea,
   Group,
   ScrollArea,
+  rem,
 } from "@mantine/core";
 import { Highlight, themes } from "prism-react-renderer";
-import { IconTerminal, IconCopy, IconCheck } from "@tabler/icons-react";
+import { IconTerminal, IconCopy, IconCheck, IconInfoCircle, IconLogs, IconBrandDocker, IconBrackets } from "@tabler/icons-react";
 import { useState, useEffect, useMemo } from "react";
 import type { Container as DockerContainerInfo, EnvVar, Mount, Port } from "@/lib/client";
 import { ContainerLogs } from "./ContainerLogs";
@@ -27,6 +24,8 @@ import { Terminal } from "@/components/Terminal/Terminal";
 import { createDockerSession, closeSession } from "@/actions/shellService";
 import { getContainerConfiguration } from "@/actions/docker";
 import yaml from "js-yaml";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ContainerResourceCards } from "./ContainerResourceCards";
 
 interface ExtendedContainer extends DockerContainerInfo {
   Env?: EnvVar[];
@@ -51,15 +50,19 @@ interface DockerComposeService {
 }
 
 export function ContainerTabs({ container }: { container: ExtendedContainer }) {
-  const [activeTab, setActiveTab] = useState("info");
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [isLoadingShell, setIsLoadingShell] = useState(false);
   const [shellError, setShellError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
   
   // Compose YAML State
   const [composeYaml, setComposeYaml] = useState<string>("");
   const [isLoadingYaml, setIsLoadingYaml] = useState(false);
   const [copied, setCopied] = useState(false);
+  const tabParam = searchParams.get("tab");
+  const allowedTabs = new Set(["overview", "logs", "raw", "shell", "compose"]);
+  const activeTab = tabParam && allowedTabs.has(tabParam) ? tabParam : "overview";
 
   useEffect(() => {
     const createShellSession = async () => {
@@ -160,11 +163,20 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
       try {
         await closeSession(sessionId);
         setSessionId(null);
-        setActiveTab("info");
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("tab", "overview");
+        router.push(`?${params.toString()}`);
       } catch (error) {
         console.error("Failed to close shell session:", error);
       }
     }
+  };
+
+  const handleTabChange = (value: string | null) => {
+    if (!value || !allowedTabs.has(value)) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", value);
+    router.push(`?${params.toString()}`);
   };
 
   const handleCopy = () => {
@@ -201,174 +213,181 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
 
   return (
     <>
-      <Tooltip.Group>
-        <SegmentedControl
-          value={activeTab}
-          onChange={setActiveTab}
-          data={[
-            { label: "Container Information", value: "info" },
-            { label: "Logs", value: "logs" },
-            { label: "Raw Data", value: "raw" },
-            { label: "Shell", value: "shell" },
-            { label: "Compose YAML", value: "compose" },
-          ]}
-          mb="md"
-        />
-      </Tooltip.Group>
+      <ContainerResourceCards containerName={container.Name} containerState={container.State} />
 
-      {activeTab === "info" && (
-        <Stack gap="md">
-          <Card shadow="sm" padding="lg" radius="md" withBorder>
-            <Text fw={500} size="lg" mb="md">
-              Basic Information
-            </Text>
-            <SimpleGrid cols={{ base: 1, md: 2 }}>
-              <div>
-                <Text size="sm" c="dimmed">
-                  Name
-                </Text>
-                <Text fw={500}>{container.Name || "N/A"}</Text>
-              </div>
-              <div>
-                <Text size="sm" c="dimmed">
-                  ID
-                </Text>
-                <Code>{container.Id}</Code>
-              </div>
-              <div>
-                <Text size="sm" c="dimmed">
-                  Image
-                </Text>
-                <Text fw={500}>{container.Image}</Text>
-              </div>
-              <div>
-                <Text size="sm" c="dimmed">
-                  State
-                </Text>
-                <Badge color={container.State === "running" ? "green" : "gray"}>{container.State || "Unknown"}</Badge>
-              </div>
-              {container.Status && (
-                <div>
-                  <Text size="sm" c="dimmed">
-                    Status
-                  </Text>
-                  <Text fw={500}>{container.Status}</Text>
-                </div>
-              )}
-              {container.Command && formattedCommand && (
-                <div>
-                  <Text size="sm" c="dimmed">
-                    Command
-                  </Text>
-                  <Code block>{formattedCommand}</Code>
-                </div>
-              )}
-            </SimpleGrid>
-          </Card>
+      <Tabs value={activeTab} onChange={handleTabChange} variant="outline" radius="md">
+        <Tabs.List mb="md">
+          <Tabs.Tab value="overview" leftSection={<IconInfoCircle style={{ width: rem(14), height: rem(14) }} />}>
+            Overview
+          </Tabs.Tab>
+          <Tabs.Tab value="logs" leftSection={<IconLogs style={{ width: rem(14), height: rem(14) }} />}>
+            Logs
+          </Tabs.Tab>
+          <Tabs.Tab value="shell" leftSection={<IconTerminal style={{ width: rem(14), height: rem(14) }} />}>
+            Shell
+          </Tabs.Tab>
+          <Tabs.Tab value="compose" leftSection={<IconBrandDocker style={{ width: rem(14), height: rem(14) }} />}>
+            Compose YAML
+          </Tabs.Tab>
+          <Tabs.Tab value="raw" leftSection={<IconBrackets style={{ width: rem(14), height: rem(14) }} />}>
+            Raw Data
+          </Tabs.Tab>
+        </Tabs.List>
 
-          {container.Env && container.Env.length > 0 && (
+        <Tabs.Panel value="overview">
+          <Stack gap="md">
             <Card shadow="sm" padding="lg" radius="md" withBorder>
               <Text fw={500} size="lg" mb="md">
-                Environment Variables
-              </Text>
-              <Stack gap="xs">
-                {container.Env.map((env, idx) => (
-                  <div key={idx}>
-                    <Text size="sm" c="dimmed">
-                      {env.name}
-                    </Text>
-                    <Code block>{env.value}</Code>
-                  </div>
-                ))}
-              </Stack>
-            </Card>
-          )}
-
-          {container.Ports && Object.values(container.Ports).length > 0 && (
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Text fw={500} size="lg" mb="md">
-                Port Mappings
+                Basic Information
               </Text>
               <SimpleGrid cols={{ base: 1, md: 2 }}>
-                {Object.entries(container.Ports)
-                  .flatMap(([key, value]) => {
-                    if (!value) return [];
-                    return (value as Port[]).map((binding) => ({
-                      ...binding,
-                      container_port: key,
-                      protocol: key.split("/")[1] || "tcp",
-                    }));
-                  })
-                  .map((port: PortBinding, idx) => (
+                <div>
+                  <Text size="sm" c="dimmed">
+                    Name
+                  </Text>
+                  <Text fw={500}>{container.Name || "N/A"}</Text>
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">
+                    ID
+                  </Text>
+                  <Code>{container.Id}</Code>
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">
+                    Image
+                  </Text>
+                  <Text fw={500}>{container.Image}</Text>
+                </div>
+                <div>
+                  <Text size="sm" c="dimmed">
+                    State
+                  </Text>
+                  <Badge color={container.State === "running" ? "green" : "gray"}>{container.State || "Unknown"}</Badge>
+                </div>
+                {container.Status && (
+                  <div>
+                    <Text size="sm" c="dimmed">
+                      Status
+                    </Text>
+                    <Text fw={500}>{container.Status}</Text>
+                  </div>
+                )}
+                {container.Command && formattedCommand && (
+                  <div>
+                    <Text size="sm" c="dimmed">
+                      Command
+                    </Text>
+                    <Code block>{formattedCommand}</Code>
+                  </div>
+                )}
+              </SimpleGrid>
+            </Card>
+
+            {container.Env && container.Env.length > 0 && (
+              <Card shadow="sm" padding="lg" radius="md" withBorder>
+                <Text fw={500} size="lg" mb="md">
+                  Environment Variables
+                </Text>
+                <Stack gap="xs">
+                  {container.Env.map((env, idx) => (
                     <div key={idx}>
+                      <Text size="sm" c="dimmed">
+                        {env.name}
+                      </Text>
+                      <Code block>{env.value}</Code>
+                    </div>
+                  ))}
+                </Stack>
+              </Card>
+            )}
+
+            {container.Ports && Object.values(container.Ports).length > 0 && (
+              <Card shadow="sm" padding="lg" radius="md" withBorder>
+                <Text fw={500} size="lg" mb="md">
+                  Port Mappings
+                </Text>
+                <SimpleGrid cols={{ base: 1, md: 2 }}>
+                  {Object.entries(container.Ports)
+                    .flatMap(([key, value]) => {
+                      if (!value) return [];
+                      return (value as Port[]).map((binding) => ({
+                        ...binding,
+                        container_port: key,
+                        protocol: key.split("/")[1] || "tcp",
+                      }));
+                    })
+                    .map((port: PortBinding, idx) => (
+                      <div key={idx}>
+                        <Text size="sm">
+                          <Code>{port.HostPort || port.host_port}</Code> → <Code>{port.container_port || "?"}</Code>
+                          {port.protocol && (
+                            <Text span c="dimmed">
+                              {" "}
+                              ({port.protocol})
+                            </Text>
+                          )}
+                        </Text>
+                      </div>
+                    ))}
+                </SimpleGrid>
+              </Card>
+            )}
+
+            {container.Mounts && container.Mounts.length > 0 && (
+              <Card shadow="sm" padding="lg" radius="md" withBorder>
+                <Text fw={500} size="lg" mb="md">
+                  Mounts
+                </Text>
+                <Stack gap="md">
+                  {container.Mounts.map((mount, idx) => (
+                    <div key={idx}>
+                      <Text size="sm" c="dimmed">
+                        Type: {mount.type || "bind"}
+                      </Text>
                       <Text size="sm">
-                        <Code>{port.HostPort || port.host_port}</Code> → <Code>{port.container_port || "?"}</Code>
-                        {port.protocol && (
-                          <Text span c="dimmed">
-                            {" "}
-                            ({port.protocol})
-                          </Text>
-                        )}
+                        <Code>{mount.source}</Code> → <Code>{mount.target}</Code>
                       </Text>
                     </div>
                   ))}
-              </SimpleGrid>
-            </Card>
-          )}
+                </Stack>
+              </Card>
+            )}
 
-          {container.Mounts && container.Mounts.length > 0 && (
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Text fw={500} size="lg" mb="md">
-                Mounts
-              </Text>
-              <Stack gap="md">
-                {container.Mounts.map((mount, idx) => (
-                  <div key={idx}>
-                    <Text size="sm" c="dimmed">
-                      Type: {mount.type || "bind"}
-                    </Text>
-                    <Text size="sm">
-                      <Code>{mount.source}</Code> → <Code>{mount.target}</Code>
-                    </Text>
-                  </div>
-                ))}
-              </Stack>
-            </Card>
-          )}
+            {container.Labels && Object.keys(container.Labels).length > 0 && (
+              <Card shadow="sm" padding="lg" radius="md" withBorder>
+                <Text fw={500} size="lg" mb="md">
+                  Labels
+                </Text>
+                <SimpleGrid cols={{ base: 1, md: 3 }}>
+                  {Object.entries(container.Labels).map(([key, value]) => (
+                    <div key={key}>
+                      <Text size="sm" c="dimmed">
+                        {key}
+                      </Text>
+                      <Code block>{String(value)}</Code>
+                    </div>
+                  ))}
+                </SimpleGrid>
+              </Card>
+            )}
+          </Stack>
+        </Tabs.Panel>
 
-          {container.Labels && Object.keys(container.Labels).length > 0 && (
-            <Card shadow="sm" padding="lg" radius="md" withBorder>
-              <Text fw={500} size="lg" mb="md">
-                Labels
-              </Text>
-              <SimpleGrid cols={{ base: 1, md: 3 }}>
-                {Object.entries(container.Labels).map(([key, value]) => (
-                  <div key={key}>
-                    <Text size="sm" c="dimmed">
-                      {key}
-                    </Text>
-                    <Code block>{String(value)}</Code>
-                  </div>
-                ))}
-              </SimpleGrid>
-            </Card>
-          )}
-        </Stack>
-      )}
+        <Tabs.Panel value="logs">
+          <ContainerLogs containerId={container.Id} />
+        </Tabs.Panel>
 
-      {activeTab === "logs" && <ContainerLogs containerId={container.Id} />}
+        <Tabs.Panel value="raw">
+          <Card shadow="sm" padding="lg" radius="md" withBorder>
+            <Text fw={500} size="lg" mb="md">
+              Raw Data
+            </Text>
+            <Code block>{JSON.stringify(container, null, 2)}</Code>
+          </Card>
+        </Tabs.Panel>
 
-      {activeTab === "raw" && (
-        <Card shadow="sm" padding="lg" radius="md" withBorder>
-          <Text fw={500} size="lg" mb="md">
-            Raw Data
-          </Text>
-          <Code block>{JSON.stringify(container, null, 2)}</Code>
-        </Card>
-      )}
-
-      {activeTab === "shell" && (
-        <>
+        <Tabs.Panel value="shell">
           {container.State !== "running" ? (
             <Card shadow="sm" padding="lg" radius="md" withBorder>
               <Text fw={500} size="lg" mb="md">
@@ -395,42 +414,42 @@ export function ContainerTabs({ container }: { container: ExtendedContainer }) {
           ) : sessionId ? (
             <Terminal sessionId={sessionId} onClose={handleCloseShell} title={`Shell - ${container.Name || container.Id.substring(0, 12)}`} />
           ) : null}
-        </>
-      )}
+        </Tabs.Panel>
 
-      {activeTab === "compose" && (
-        <Card shadow="sm" padding="lg" radius="md" withBorder h="600px" style={{ display: "flex", flexDirection: "column" }}>
-          <Group justify="space-between" mb="md">
-            <Text fw={500} size="lg">
-              Docker Compose YAML
-            </Text>
-            <Button color={copied ? "teal" : "blue"} onClick={handleCopy} leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}>
-              {copied ? "Copied" : "Copy YAML"}
-            </Button>
-          </Group>
-          {isLoadingYaml ? (
-            <Center style={{ flex: 1 }}>
-              <Loader size="md" />
-            </Center>
-          ) : (
-            <ScrollArea style={{ flex: 1 }} type="auto" offsetScrollbars>
-              <Highlight theme={themes.vsDark} code={composeYaml} language="yaml">
-                {({ style, tokens, getLineProps, getTokenProps }) => (
-                  <pre style={{ ...style, margin: 0, padding: "var(--mantine-spacing-md)", fontFamily: "monospace", fontSize: "medium" }}>
-                    {tokens.map((line, i) => (
-                      <div key={i} {...getLineProps({ line }) }>
-                        {line.map((token, key) => (
-                          <span key={key} {...getTokenProps({ token })} />
-                        ))}
-                      </div>
-                    ))}
-                  </pre>
-                )}
-              </Highlight>
-            </ScrollArea>
-          )}
-        </Card>
-      )}
+        <Tabs.Panel value="compose">
+          <Card shadow="sm" padding="lg" radius="md" withBorder h="600px" style={{ display: "flex", flexDirection: "column" }}>
+            <Group justify="space-between" mb="md">
+              <Text fw={500} size="lg">
+                Docker Compose YAML
+              </Text>
+              <Button color={copied ? "teal" : "blue"} onClick={handleCopy} leftSection={copied ? <IconCheck size={16} /> : <IconCopy size={16} />}>
+                {copied ? "Copied" : "Copy YAML"}
+              </Button>
+            </Group>
+            {isLoadingYaml ? (
+              <Center style={{ flex: 1 }}>
+                <Loader size="md" />
+              </Center>
+            ) : (
+              <ScrollArea style={{ flex: 1 }} type="auto" offsetScrollbars>
+                <Highlight theme={themes.vsDark} code={composeYaml} language="yaml">
+                  {({ style, tokens, getLineProps, getTokenProps }) => (
+                    <pre style={{ ...style, margin: 0, padding: "var(--mantine-spacing-md)", fontFamily: "monospace", fontSize: "medium" }}>
+                      {tokens.map((line, i) => (
+                        <div key={i} {...getLineProps({ line }) }>
+                          {line.map((token, key) => (
+                            <span key={key} {...getTokenProps({ token })} />
+                          ))}
+                        </div>
+                      ))}
+                    </pre>
+                  )}
+                </Highlight>
+              </ScrollArea>
+            )}
+          </Card>
+        </Tabs.Panel>
+      </Tabs>
     </>
   );
 }
