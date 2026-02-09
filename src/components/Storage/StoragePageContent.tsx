@@ -1,12 +1,48 @@
 "use client";
 
-import { applyStorageStrategy, createBtrfsShare, listBtrfsShares, listBtrfsVolumes, listStorageDevices, listStorageStrategies } from "@/actions/storage";
+import {
+  applyStorageStrategy,
+  createBtrfsShare,
+  listBtrfsShares,
+  listBtrfsVolumes,
+  listStorageDevices,
+  listStorageStrategies,
+} from "@/actions/storage";
 import { Terminal } from "@/components/Terminal/Terminal";
 import type { BtrfsShare, BtrfsVolume, Disk, PackageStatus, StorageStrategy } from "@/lib/client";
+import { formatBytes } from "@/lib/format";
 import { getWebSocketUrl } from "@/lib/shellClient";
-import { Alert, Badge, Button, Container, Group, LoadingOverlay, Modal, Select, Stack, Table, Tabs, Text, TextInput, ThemeIcon, Title } from "@mantine/core";
+import {
+  Alert,
+  Badge,
+  Box,
+  Button,
+  Container,
+  Group,
+  LoadingOverlay,
+  Modal,
+  Paper,
+  ScrollArea,
+  Select,
+  SimpleGrid,
+  Stack,
+  Table,
+  Tabs,
+  Text,
+  TextInput,
+  ThemeIcon,
+  Title,
+} from "@mantine/core";
 import { useInterval } from "@mantine/hooks";
-import { IconAlertTriangle, IconDatabase, IconFolder, IconFolderPlus, IconShare } from "@tabler/icons-react";
+import {
+  IconAlertTriangle,
+  IconDatabase,
+  IconFolder,
+  IconFolderPlus,
+  IconLayoutGrid,
+  IconRosetteDiscountCheckFilled,
+  IconShare,
+} from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { DiskInventory } from "./DiskInventory";
@@ -45,6 +81,11 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
     name: "",
     mountPath: "",
   });
+
+  const totalDisks = disks.length;
+  const availableDisks = disks.filter((d) => d.available).length;
+  const raidGroups = new Set(disks.map((d) => d.raid_group).filter(Boolean)).size;
+  const totalCapacityBytes = disks.reduce((acc, d) => acc + (d.size || 0), 0);
 
   // Polling for disk updates
   const refreshDisks = useCallback(async () => {
@@ -211,14 +252,101 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
   return (
     <Container size="xl" py="xl">
       <Stack gap="lg">
-        <div>
-          <Title order={1}>Storage</Title>
-          <Text c="dimmed">Manage physical disks, storage pools, and shares</Text>
-        </div>
+        <Paper withBorder radius="lg" p="lg">
+          <Group justify="space-between" align="flex-start" gap="md">
+            <Box>
+              <Group gap="xs" mb={6}>
+                <ThemeIcon variant="light" color="blue" radius="xl">
+                  <IconDatabase size={16} />
+                </ThemeIcon>
+                <Text size="sm" c="dimmed" fw={600}>
+                  Storage Control Center
+                </Text>
+              </Group>
+              <Title order={1}>Storage</Title>
+              <Text c="dimmed" mt={6}>
+                Manage physical disks, pool provisioning, and Btrfs shares from a single workspace.
+              </Text>
+            </Box>
+            <Badge size="lg" color="blue" variant="light">
+              Live Inventory
+            </Badge>
+          </Group>
+
+          <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} mt="lg">
+            <Paper withBorder radius="md" p="md">
+              <Group justify="space-between">
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                  Disks
+                </Text>
+                <ThemeIcon size="sm" variant="light" color="blue">
+                  <IconLayoutGrid size={14} />
+                </ThemeIcon>
+              </Group>
+              <Text fw={700} size="xl" mt={4}>
+                {totalDisks}
+              </Text>
+              <Text size="xs" c="dimmed">
+                Detected storage devices
+              </Text>
+            </Paper>
+
+            <Paper withBorder radius="md" p="md">
+              <Group justify="space-between">
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                  Available
+                </Text>
+                <ThemeIcon size="sm" variant="light" color="teal">
+                  <IconRosetteDiscountCheckFilled size={14} />
+                </ThemeIcon>
+              </Group>
+              <Text fw={700} size="xl" mt={4}>
+                {availableDisks}
+              </Text>
+              <Text size="xs" c="dimmed">
+                Ready for pool creation
+              </Text>
+            </Paper>
+
+            <Paper withBorder radius="md" p="md">
+              <Group justify="space-between">
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                  RAID Groups
+                </Text>
+                <ThemeIcon size="sm" variant="light" color="grape">
+                  <IconDatabase size={14} />
+                </ThemeIcon>
+              </Group>
+              <Text fw={700} size="xl" mt={4}>
+                {raidGroups}
+              </Text>
+              <Text size="xs" c="dimmed">
+                Active grouped arrays
+              </Text>
+            </Paper>
+
+            <Paper withBorder radius="md" p="md">
+              <Group justify="space-between">
+                <Text size="xs" c="dimmed" tt="uppercase" fw={700}>
+                  Raw Capacity
+                </Text>
+                <ThemeIcon size="sm" variant="light" color="orange">
+                  <IconDatabase size={14} />
+                </ThemeIcon>
+              </Group>
+              <Text fw={700} size="xl" mt={4}>
+                {formatBytes(totalCapacityBytes)}
+              </Text>
+              <Text size="xs" c="dimmed">
+                Sum of all listed disks
+              </Text>
+            </Paper>
+          </SimpleGrid>
+        </Paper>
 
         <PrerequisitesBanner packages={initialPackages} />
 
-        <Tabs defaultValue="disks">
+        <Tabs defaultValue="disks" variant="pills" radius="xl">
           <Tabs.List>
             <Tabs.Tab value="disks" leftSection={<IconDatabase size={16} />}>
               Disks & Pools
@@ -229,67 +357,92 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
           </Tabs.List>
 
           <Tabs.Panel value="disks" pt="md">
-            <Stack gap="lg">
-              <Group justify="space-between" align="center">
-                <Title order={3}>Physical Disks</Title>
-                <Button onClick={handleCreatePool}>Create Storage Pool</Button>
-              </Group>
+            <Paper withBorder radius="lg" p="lg">
+              <Stack gap="lg">
+                <Group justify="space-between" align="center">
+                  <Box>
+                    <Title order={3}>Physical Disks</Title>
+                    <Text c="dimmed" size="sm">
+                      Click a disk or array to inspect details and configuration.
+                    </Text>
+                  </Box>
+                  <Button onClick={handleCreatePool}>Create Storage Pool</Button>
+                </Group>
 
-              <DiskInventory disks={disks} onDiskClick={handleDiskClick} />
-            </Stack>
+                <DiskInventory disks={disks} onDiskClick={handleDiskClick} />
+              </Stack>
+            </Paper>
           </Tabs.Panel>
 
           <Tabs.Panel value="shares" pt="md">
-            <Stack gap="md">
-              <Group justify="space-between" align="center">
-                <Title order={3}>Shared Folders</Title>
-                <Button leftSection={<IconFolderPlus size={16} />} onClick={handleOpenShareModal}>
-                  Create Share
-                </Button>
-              </Group>
+            <Paper withBorder radius="lg" p="lg">
+              <Stack gap="md">
+                <Group justify="space-between" align="center">
+                  <Box>
+                    <Title order={3}>Shared Folders</Title>
+                    <Text c="dimmed" size="sm">
+                      Btrfs-backed shares for services and network access.
+                    </Text>
+                  </Box>
+                  <Button leftSection={<IconFolderPlus size={16} />} onClick={handleOpenShareModal}>
+                    Create Share
+                  </Button>
+                </Group>
 
-              <Text c="dimmed">Manage your Btrfs subvolumes and shares here.</Text>
-
-              {btrfsShares.length === 0 ? (
-                <Alert color="blue" title="No Shares Found" icon={<IconFolder size={20} />}>
-                  You haven&apos;t created any shares yet. Click &quot;Create Share&quot; to get started.
-                </Alert>
-              ) : (
-                <Table striped highlightOnHover withTableBorder withColumnBorders>
-                  <Table.Thead>
-                    <Table.Tr>
-                      <Table.Th>Name</Table.Th>
-                      <Table.Th>Mount Path</Table.Th>
-                      <Table.Th>Storage Pool (Parent)</Table.Th>
-                      <Table.Th>Device</Table.Th>
-                      <Table.Th>ID</Table.Th>
-                    </Table.Tr>
-                  </Table.Thead>
-                  <Table.Tbody>
-                    {btrfsShares.map((share) => (
-                      <Table.Tr key={share.mount_path}>
-                        <Table.Td fw={500}>
-                          <Group gap="xs">
-                            <ThemeIcon size="sm" variant="light" color="blue">
-                              <IconFolder size={14} />
-                            </ThemeIcon>
-                            {share.name}
-                          </Group>
-                        </Table.Td>
-                        <Table.Td>{share.mount_path}</Table.Td>
-                        <Table.Td>{share.parent_path}</Table.Td>
-                        <Table.Td>
-                          <Badge variant="outline" color="gray">
-                            {share.device}
-                          </Badge>
-                        </Table.Td>
-                        <Table.Td>{share.subvolid}</Table.Td>
-                      </Table.Tr>
-                    ))}
-                  </Table.Tbody>
-                </Table>
-              )}
-            </Stack>
+                {btrfsShares.length === 0 ? (
+                  <Paper withBorder radius="md" p="lg">
+                    <Stack gap="xs" align="center">
+                      <ThemeIcon size="xl" radius="xl" variant="light" color="blue">
+                        <IconFolder size={22} />
+                      </ThemeIcon>
+                      <Text fw={600}>No shares found</Text>
+                      <Text size="sm" c="dimmed" ta="center">
+                        You have not created any shares yet. Create one to expose persistent storage paths.
+                      </Text>
+                      <Button mt="xs" leftSection={<IconFolderPlus size={16} />} onClick={handleOpenShareModal}>
+                        Create First Share
+                      </Button>
+                    </Stack>
+                  </Paper>
+                ) : (
+                  <ScrollArea>
+                    <Table striped highlightOnHover withTableBorder withColumnBorders>
+                      <Table.Thead>
+                        <Table.Tr>
+                          <Table.Th>Name</Table.Th>
+                          <Table.Th>Mount Path</Table.Th>
+                          <Table.Th>Storage Pool (Parent)</Table.Th>
+                          <Table.Th>Device</Table.Th>
+                          <Table.Th>ID</Table.Th>
+                        </Table.Tr>
+                      </Table.Thead>
+                      <Table.Tbody>
+                        {btrfsShares.map((share) => (
+                          <Table.Tr key={share.mount_path}>
+                            <Table.Td fw={500}>
+                              <Group gap="xs">
+                                <ThemeIcon size="sm" variant="light" color="blue">
+                                  <IconFolder size={14} />
+                                </ThemeIcon>
+                                {share.name}
+                              </Group>
+                            </Table.Td>
+                            <Table.Td>{share.mount_path}</Table.Td>
+                            <Table.Td>{share.parent_path}</Table.Td>
+                            <Table.Td>
+                              <Badge variant="outline" color="gray">
+                                {share.device}
+                              </Badge>
+                            </Table.Td>
+                            <Table.Td>{share.subvolid}</Table.Td>
+                          </Table.Tr>
+                        ))}
+                      </Table.Tbody>
+                    </Table>
+                  </ScrollArea>
+                )}
+              </Stack>
+            </Paper>
           </Tabs.Panel>
         </Tabs>
       </Stack>
@@ -335,7 +488,13 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
       </Modal>
 
       {/* Terminal/Progress Modal */}
-      <Modal opened={isTerminalOpen} onClose={() => setIsTerminalOpen(false)} title="Applying Storage Configuration" size="xl" closeOnClickOutside={false}>
+      <Modal
+        opened={isTerminalOpen}
+        onClose={() => setIsTerminalOpen(false)}
+        title="Applying Storage Configuration"
+        size="xl"
+        closeOnClickOutside={false}
+      >
         <Terminal title="Configuration Log" socketFactory={socketFactory} onClose={() => setIsTerminalOpen(false)} />
       </Modal>
 
@@ -361,9 +520,21 @@ export function StoragePageContent({ initialDisks, initialPackages }: StoragePag
                 onChange={(val) => setShareForm((prev) => ({ ...prev, volume: val || "" }))}
               />
 
-              <TextInput label="Share Name" placeholder="e.g. documents" description="Alphanumeric characters only" value={shareForm.name} onChange={(e) => handleShareNameChange(e.currentTarget.value)} />
+              <TextInput
+                label="Share Name"
+                placeholder="e.g. documents"
+                description="Alphanumeric characters only"
+                value={shareForm.name}
+                onChange={(e) => handleShareNameChange(e.currentTarget.value)}
+              />
 
-              <TextInput label="Mount Path" placeholder="/shares/..." value={shareForm.mountPath} onChange={(e) => setShareForm((prev) => ({ ...prev, mountPath: e.currentTarget.value }))} description="Where this share will be accessible in the system" />
+              <TextInput
+                label="Mount Path"
+                placeholder="/shares/..."
+                value={shareForm.mountPath}
+                onChange={(e) => setShareForm((prev) => ({ ...prev, mountPath: e.currentTarget.value }))}
+                description="Where this share will be accessible in the system"
+              />
 
               <Group justify="flex-end" mt="md">
                 <Button variant="light" onClick={() => setIsShareModalOpen(false)}>
