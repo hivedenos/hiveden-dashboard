@@ -3,6 +3,7 @@
 import { fetchMetricVector, type MetricVectorSample } from "@/actions/metrics";
 import { useEffect, useMemo, useState } from "react";
 import { normalizeContainerName, resolvePrometheusUrl } from "@/lib/prometheus";
+import { usePrometheusHost } from "@/hooks/usePrometheusHost";
 
 export interface ContainerListMetric {
   cpuPercent: number | null;
@@ -30,6 +31,7 @@ export function useContainersMetricsMap(containerNames: string[], prometheusUrl?
   const [data, setData] = useState<Record<string, ContainerListMetric>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { host: metricsHost, loading: hostLoading, error: hostError } = usePrometheusHost();
 
   const normalizedNames = useMemo(() => containerNames.map((name) => normalizeContainerName(name)), [containerNames]);
 
@@ -42,7 +44,14 @@ export function useContainersMetricsMap(containerNames: string[], prometheusUrl?
     }
 
     let cancelled = false;
-    const url = resolvePrometheusUrl(prometheusUrl);
+    const sourceHost = prometheusUrl || metricsHost;
+    const url = resolvePrometheusUrl(sourceHost);
+    if (!url) {
+      setData({});
+      setLoading(hostLoading);
+      setError(hostError || "Prometheus host is not configured in /system/metrics.");
+      return;
+    }
 
     const cpuQuery = 'sum by (name) (rate(container_cpu_usage_seconds_total{name!=""}[1m])) * 100';
     const networkRxQuery = 'sum by (name) (rate(container_network_receive_bytes_total{name!=""}[1m]))';
@@ -104,7 +113,7 @@ export function useContainersMetricsMap(containerNames: string[], prometheusUrl?
       cancelled = true;
       clearInterval(timer);
     };
-  }, [normalizedNames, prometheusUrl, intervalMs]);
+  }, [normalizedNames, prometheusUrl, metricsHost, hostLoading, hostError, intervalMs]);
 
   return { data, loading, error };
 }

@@ -12,6 +12,7 @@ export interface MetricVectorSample {
 
 export interface MetricResult {
   currentValue: number;
+  hasSample?: boolean;
   history?: MetricPoint[];
   status: 'success' | 'error';
   error?: string;
@@ -23,16 +24,22 @@ export interface MetricVectorResult {
   error?: string;
 }
 
-function normalizePrometheusUrl(prometheusUrl: string): string {
-  let baseUrl = prometheusUrl;
-  if (!baseUrl.startsWith('http')) {
-    baseUrl = `https://${baseUrl}`;
+function normalizePrometheusUrl(prometheusUrl?: string): string {
+  const configuredUrl = prometheusUrl?.trim() || '';
+
+  if (!configuredUrl) {
+    throw new Error('Prometheus host is not configured in /system/metrics.');
+  }
+
+  let baseUrl = configuredUrl;
+  if (!baseUrl.startsWith('http://') && !baseUrl.startsWith('https://')) {
+    baseUrl = `http://${baseUrl}`;
   }
   return baseUrl.replace(/\/$/, '');
 }
 
 export async function fetchMetric(
-  prometheusUrl: string,
+  prometheusUrl: string | undefined,
   query: string,
   rangeMinutes: number = 0
 ): Promise<MetricResult> {
@@ -57,9 +64,11 @@ export async function fetchMetric(
     }
 
     let currentValue = 0;
+    let hasSample = false;
     if (instantData.data.result.length > 0) {
         // value is [timestamp, "value"]
         currentValue = parseFloat(instantData.data.result[0].value[1]);
+        hasSample = Number.isFinite(currentValue);
     }
 
     // 2. Fetch History if requested (Range Query)
@@ -93,21 +102,23 @@ export async function fetchMetric(
     return {
         status: 'success',
         currentValue,
+        hasSample,
         history: history.length > 0 ? history : undefined
     };
 
   } catch (error: any) {
     console.error('Metric fetch error:', error);
     return {
-        status: 'error',
-        currentValue: 0,
-        error: error.message || 'Unknown error'
+      status: 'error',
+      currentValue: 0,
+      hasSample: false,
+      error: error.message || 'Unknown error'
     };
   }
 }
 
 export async function fetchMetricVector(
-  prometheusUrl: string,
+  prometheusUrl: string | undefined,
   query: string
 ): Promise<MetricVectorResult> {
   try {

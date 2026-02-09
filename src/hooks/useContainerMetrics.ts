@@ -3,6 +3,7 @@
 import { fetchMetric } from "@/actions/metrics";
 import { useEffect, useState } from "react";
 import { buildContainerRegex, resolvePrometheusUrl } from "@/lib/prometheus";
+import { usePrometheusHost } from "@/hooks/usePrometheusHost";
 
 export interface ContainerResourceMetrics {
   cpuPercent: number | null;
@@ -17,6 +18,7 @@ export function useContainerMetrics(containerName?: string, prometheusUrl?: stri
   const [data, setData] = useState<ContainerResourceMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { host: metricsHost, loading: hostLoading, error: hostError } = usePrometheusHost();
 
   useEffect(() => {
     if (!containerName) {
@@ -27,7 +29,14 @@ export function useContainerMetrics(containerName?: string, prometheusUrl?: stri
     }
 
     let cancelled = false;
-    const url = resolvePrometheusUrl(prometheusUrl);
+    const sourceHost = prometheusUrl || metricsHost;
+    const url = resolvePrometheusUrl(sourceHost);
+    if (!url) {
+      setData(null);
+      setLoading(hostLoading);
+      setError(hostError || "Prometheus host is not configured in /system/metrics.");
+      return;
+    }
     const matcher = buildContainerRegex(containerName);
 
     const cpuQuery = `sum(rate(container_cpu_usage_seconds_total{name=~"${matcher}"}[1m])) * 100`;
@@ -59,18 +68,24 @@ export function useContainerMetrics(containerName?: string, prometheusUrl?: stri
           throw new Error(firstError.error || "Failed to load container metrics");
         }
 
-        const memoryLimitValue = Number.isFinite(memoryLimit.currentValue) ? memoryLimit.currentValue : 0;
-        const memoryUsedValue = Number.isFinite(memoryUsed.currentValue) ? memoryUsed.currentValue : 0;
-        const memoryPercent = memoryLimitValue > 0 ? (memoryUsedValue / memoryLimitValue) * 100 : null;
+        const cpuValue = cpu.hasSample ? cpu.currentValue : null;
+        const memoryUsedValue = memoryUsed.hasSample ? memoryUsed.currentValue : null;
+        const memoryLimitValue = memoryLimit.hasSample && memoryLimit.currentValue > 0 ? memoryLimit.currentValue : null;
+        const networkRxValue = networkRx.hasSample ? networkRx.currentValue : null;
+        const networkTxValue = networkTx.hasSample ? networkTx.currentValue : null;
+        const memoryPercent =
+          memoryUsedValue !== null && memoryLimitValue !== null && memoryLimitValue > 0
+            ? (memoryUsedValue / memoryLimitValue) * 100
+            : null;
 
         if (!cancelled) {
           setData({
-            cpuPercent: Number.isFinite(cpu.currentValue) ? cpu.currentValue : null,
-            memoryUsedBytes: Number.isFinite(memoryUsedValue) ? memoryUsedValue : null,
-            memoryLimitBytes: memoryLimitValue > 0 ? memoryLimitValue : null,
+            cpuPercent: cpuValue,
+            memoryUsedBytes: memoryUsedValue,
+            memoryLimitBytes: memoryLimitValue,
             memoryPercent,
-            networkRxBps: Number.isFinite(networkRx.currentValue) ? networkRx.currentValue : null,
-            networkTxBps: Number.isFinite(networkTx.currentValue) ? networkTx.currentValue : null,
+            networkRxBps: networkRxValue,
+            networkTxBps: networkTxValue,
           });
           setError(null);
         }
@@ -92,7 +107,7 @@ export function useContainerMetrics(containerName?: string, prometheusUrl?: stri
       cancelled = true;
       clearInterval(timer);
     };
-  }, [containerName, prometheusUrl, intervalMs]);
+  }, [containerName, prometheusUrl, metricsHost, hostLoading, hostError, intervalMs]);
 
   return { data, loading, error };
 }

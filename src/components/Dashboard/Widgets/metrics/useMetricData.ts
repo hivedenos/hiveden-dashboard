@@ -3,6 +3,7 @@
 import { fetchMetric, MetricResult } from "@/actions/metrics";
 import { useEffect, useState } from "react";
 import { resolvePrometheusUrl } from "@/lib/prometheus";
+import { usePrometheusHost } from "@/hooks/usePrometheusHost";
 
 export interface BaseMetricProps {
   title?: string;
@@ -35,13 +36,20 @@ export const useMetricData = (props: BaseMetricProps, history: boolean) => {
   const [data, setData] = useState<MetricResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { host: metricsHost, loading: hostLoading, error: hostError } = usePrometheusHost();
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       setError(null);
       try {
-        const url = resolvePrometheusUrl(prometheusUrl);
+        const url = resolvePrometheusUrl(prometheusUrl || metricsHost);
+        if (!url) {
+          setError(hostError || "Prometheus host is not configured in /system/metrics.");
+          setData(null);
+          setLoading(hostLoading);
+          return;
+        }
 
         const safeName = containerName || ".*";
         const finalQuery = query.replace(/\$container/g, safeName);
@@ -64,7 +72,7 @@ export const useMetricData = (props: BaseMetricProps, history: boolean) => {
     loadData();
     const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
-  }, [containerName, query, prometheusUrl, history]);
+  }, [containerName, query, prometheusUrl, metricsHost, hostLoading, hostError, history]);
 
   return { data, loading, error };
 };

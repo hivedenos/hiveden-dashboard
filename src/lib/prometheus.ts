@@ -1,30 +1,14 @@
 export function resolvePrometheusUrl(explicitUrl?: string): string {
-  if (explicitUrl && explicitUrl.trim().length > 0) {
-    return explicitUrl;
+  const configured = explicitUrl?.trim() || '';
+  if (!configured) {
+    return '';
   }
 
-  const envUrl = process.env.NEXT_PUBLIC_PROMETHEUS_URL;
-  if (envUrl && envUrl.trim().length > 0) {
-    return envUrl;
+  if (configured.startsWith('http://') || configured.startsWith('https://')) {
+    return configured.replace(/\/$/, '');
   }
 
-  if (typeof window === 'undefined') {
-    return 'http://localhost:9090';
-  }
-
-  const protocol = window.location.protocol;
-  const hostname = window.location.hostname;
-  let targetDomain = hostname;
-
-  if (hostname.startsWith('dashboard.')) {
-    targetDomain = hostname.replace('dashboard.', 'prometheus.');
-  } else if (hostname.startsWith('www.')) {
-    targetDomain = hostname.replace('www.', 'prometheus.');
-  } else {
-    targetDomain = `prometheus.${hostname}`;
-  }
-
-  return `${protocol}//${targetDomain}`;
+  return `http://${configured.replace(/\/$/, '')}`;
 }
 
 export function normalizeContainerName(name: string | null | undefined): string {

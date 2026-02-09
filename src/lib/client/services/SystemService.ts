@@ -8,6 +8,7 @@ import type { DomainInfoResponse } from '../models/DomainInfoResponse';
 import type { DomainUpdateRequest } from '../models/DomainUpdateRequest';
 import type { DomainUpdateResponse } from '../models/DomainUpdateResponse';
 import type { LocationListResponse } from '../models/LocationListResponse';
+import type { MetricsConfigResponse } from '../models/MetricsConfigResponse';
 import type { SuccessResponse } from '../models/SuccessResponse';
 import type { UpdateLocationRequest } from '../models/UpdateLocationRequest';
 import type { CancelablePromise } from '../core/CancelablePromise';
@@ -76,6 +77,18 @@ export class SystemService {
             errors: {
                 422: `Validation Error`,
             },
+        });
+    }
+    /**
+     * Get Metrics Config
+     * Get metrics configuration for UI.
+     * @returns MetricsConfigResponse Successful Response
+     * @throws ApiError
+     */
+    public static getMetricsConfigSystemMetricsGet(): CancelablePromise<MetricsConfigResponse> {
+        return __request(OpenAPI, {
+            method: 'GET',
+            url: '/system/metrics',
         });
     }
     /**

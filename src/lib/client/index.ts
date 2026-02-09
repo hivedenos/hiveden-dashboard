@@ -77,6 +77,8 @@ export type { LogEntry } from './models/LogEntry';
 export type { LogListResponse } from './models/LogListResponse';
 export type { LXCContainer } from './models/LXCContainer';
 export type { LXCContainerCreate } from './models/LXCContainerCreate';
+export type { MetricsConfigResponse } from './models/MetricsConfigResponse';
+export type { MetricsDependenciesConfig } from './models/MetricsDependenciesConfig';
 export type { Mount } from './models/Mount';
 export type { MountPoint } from './models/MountPoint';
 export type { MountRequest } from './models/MountRequest';

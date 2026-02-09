@@ -10,7 +10,8 @@ import type {
   SuccessResponse, 
   UpdateLocationRequest,
   DNSConfigResponse,
-  DNSUpdateRequest
+  DNSUpdateRequest,
+  MetricsConfigResponse
 } from '@/lib/client';
 import { revalidatePath } from 'next/cache';
 
@@ -42,9 +43,12 @@ export async function getComprehensiveLocations(): Promise<LocationListResponse>
   return SystemService.getComprehensiveLocationsSystemLocationsTreeGet();
 }
 
+export async function getMetricsConfig(): Promise<MetricsConfigResponse> {
+  return SystemService.getMetricsConfigSystemMetricsGet();
+}
+
 export async function updateSystemLocation(key: string, request: UpdateLocationRequest): Promise<SuccessResponse> {
   const response = await SystemService.updateSystemLocationSystemLocationsKeyPut(key, request);
   revalidatePath('/system');
   return response;
 }
-

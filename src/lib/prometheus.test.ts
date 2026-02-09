@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildContainerRegex, normalizeContainerName } from "./prometheus";
+import { buildContainerRegex, normalizeContainerName, resolvePrometheusUrl } from "./prometheus";
 
 describe("prometheus helpers", () => {
   test("normalizes container names", () => {
@@ -11,5 +11,11 @@ describe("prometheus helpers", () => {
   test("builds safe regex matcher", () => {
     expect(buildContainerRegex("/my.app")).toBe("^/?my\\.app$");
     expect(buildContainerRegex("")).toBe(".*");
+  });
+
+  test("resolves explicit and default prometheus urls", () => {
+    expect(resolvePrometheusUrl("http://prometheus.example.com")).toBe("http://prometheus.example.com");
+    expect(resolvePrometheusUrl("prometheus.internal.local:9090")).toBe("http://prometheus.internal.local:9090");
+    expect(resolvePrometheusUrl()).toBe("");
   });
 });

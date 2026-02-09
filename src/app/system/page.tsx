@@ -1,11 +1,12 @@
 'use client';
 
 import { Container, Tabs, Title, rem } from '@mantine/core';
-import { IconWorld, IconFolder, IconServer, IconDatabase } from '@tabler/icons-react';
+import { IconWorld, IconFolder, IconServer, IconDatabase, IconChartLine } from '@tabler/icons-react';
 import { DomainSettings } from '@/components/System/DomainSettings';
 import { LocationSettings } from '@/components/System/LocationSettings';
 import { DNSSettings } from '@/components/System/DNSSettings';
 import { DatabaseList } from '@/components/System/DatabaseList';
+import { MetricsSettings } from '@/components/System/MetricsSettings';
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
@@ -51,6 +52,9 @@ function SystemPageContent() {
           <Tabs.Tab value="locations" leftSection={<IconFolder style={iconStyle} />}>
             Storage Locations
           </Tabs.Tab>
+          <Tabs.Tab value="metrics" leftSection={<IconChartLine style={iconStyle} />}>
+            Metrics
+          </Tabs.Tab>
         </Tabs.List>
 
         <Tabs.Panel value="domain">
@@ -67,6 +71,10 @@ function SystemPageContent() {
 
         <Tabs.Panel value="locations">
           <LocationSettings />
+        </Tabs.Panel>
+
+        <Tabs.Panel value="metrics">
+          <MetricsSettings />
         </Tabs.Panel>
       </Tabs>
     </Container>
