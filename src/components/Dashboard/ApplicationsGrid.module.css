@@ -1,0 +1,25 @@
+.cardLink {
+  display: block;
+  text-decoration: none;
+}
+
+.card {
+  aspect-ratio: 1 / 1;
+  width: min(100%, 64px);
+  margin: 0 auto;
+  border: 1px solid var(--mantine-color-default-border);
+  border-radius: var(--mantine-radius-md);
+  cursor: pointer;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.cardLink:hover .card {
+  transform: translateY(-2px);
+  border-color: var(--mantine-color-blue-6);
+  box-shadow: var(--mantine-shadow-sm);
+}
+
+.cardLink:focus-visible .card {
+  outline: 2px solid var(--mantine-color-blue-6);
+  outline-offset: 2px;
+}

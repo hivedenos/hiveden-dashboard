@@ -1,11 +1,17 @@
 'use client';
 
 import { Group, Paper, Stack, Text, ThemeIcon } from '@mantine/core';
-import { IconActivityHeartbeat, IconBrandDocker } from '@tabler/icons-react';
+import { IconActivityHeartbeat, IconApps, IconBrandDocker } from '@tabler/icons-react';
 import { SystemMetricsGrid } from './Widgets/metrics/SystemMetricsGrid';
 import { DockerFleetMetricsRow } from './Widgets/metrics/DockerFleetMetricsRow';
+import type { IngressContainerInfo } from '@/lib/client';
+import { ApplicationsGrid } from './ApplicationsGrid';
 
-export function DashboardLayout() {
+interface DashboardLayoutProps {
+  applications: IngressContainerInfo[];
+}
+
+export function DashboardLayout({ applications }: DashboardLayoutProps) {
   return (
     <Stack gap="md">
       <Paper
@@ -58,6 +64,32 @@ export function DashboardLayout() {
         </Group>
 
         <DockerFleetMetricsRow />
+      </Paper>
+
+      <Paper
+        withBorder
+        radius="md"
+        p="md"
+        style={{
+          background:
+            'linear-gradient(160deg, rgba(234,179,8,0.10) 0%, rgba(234,179,8,0.03) 35%, transparent 100%)',
+        }}
+      >
+        <Group align="flex-start" mb="md" wrap="nowrap">
+          <ThemeIcon size="lg" radius="md" variant="light" color="yellow">
+            <IconApps size={18} />
+          </ThemeIcon>
+          <Stack gap={2}>
+            <Text fw={700} size="lg">
+              Applications
+            </Text>
+            <Text size="sm" c="dimmed">
+              Quick links to applications exposed through Traefik.
+            </Text>
+          </Stack>
+        </Group>
+
+        <ApplicationsGrid applications={applications} />
       </Paper>
     </Stack>
   );
