@@ -14,8 +14,9 @@ import type {
   ImageListResponse,
   NetworkCreate,
   SuccessResponse,
+  VolumeListResponse,
 } from "@/lib/client";
-import { DockerImagesService, DockerService } from "@/lib/client";
+import { DockerImagesService, DockerService, DockerVolumesService } from "@/lib/client";
 import { revalidatePath } from "next/cache";
 
 export async function listImages(): Promise<ImageListResponse> {
@@ -108,5 +109,15 @@ export async function getNetwork(networkId: string): Promise<DataResponse> {
 export async function removeNetwork(networkId: string): Promise<SuccessResponse> {
   const result = await DockerService.removeOneNetworkDockerNetworksNetworkIdDelete(networkId);
   revalidatePath("/docker/containers");
+  return result;
+}
+
+export async function listDockerVolumes(dangling?: boolean): Promise<VolumeListResponse> {
+  return DockerVolumesService.listDockerVolumesDockerVolumesGet(dangling ?? null);
+}
+
+export async function deleteDockerVolume(volumeName: string): Promise<BaseResponse> {
+  const result = await DockerVolumesService.deleteDockerVolumeDockerVolumesVolumeNameDelete(volumeName);
+  revalidatePath("/docker/volumes");
   return result;
 }

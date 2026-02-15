@@ -34,6 +34,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       links: [
         { label: "Containers", link: "/docker/containers" },
         { label: "Images", link: "/docker/images" },
+        { label: "Volumes", link: "/docker/volumes" },
       ],
     },
     { label: "LXC", icon: IconServer, link: "/lxc" },
