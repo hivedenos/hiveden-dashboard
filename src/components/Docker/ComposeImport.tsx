@@ -17,6 +17,7 @@ interface DockerComposeConfig {
       ports?: (string | number | object)[];
       volumes?: (string | object)[];
       labels?: { [key: string]: string } | string[];
+      depends_on?: string[] | { [serviceName: string]: unknown };
     };
   };
 }
@@ -144,6 +145,15 @@ export function ComposeYamlInput({ onParsed, onCancel }: ComposeYamlInputProps) 
             mappedData.labels = labels;
           } else if (typeof service.labels === "object") {
             mappedData.labels = service.labels as Record<string, string>;
+          }
+        }
+
+        // Dependencies
+        if (service.depends_on) {
+          if (Array.isArray(service.depends_on)) {
+            mappedData.dependencies = [...new Set(service.depends_on.map((name) => String(name).trim()).filter(Boolean))];
+          } else if (typeof service.depends_on === "object") {
+            mappedData.dependencies = [...new Set(Object.keys(service.depends_on).map((name) => name.trim()).filter(Boolean))];
           }
         }
 

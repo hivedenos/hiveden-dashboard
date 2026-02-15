@@ -11,6 +11,7 @@ export type ContainerCreate = {
     name: string;
     image: string;
     command?: (Array<string> | null);
+    dependencies?: (Array<string> | null);
     env?: (Array<EnvVar> | null);
     ports?: (Array<Port> | null);
     mounts?: (Array<Mount> | null);

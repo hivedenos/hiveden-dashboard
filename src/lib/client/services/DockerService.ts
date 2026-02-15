@@ -6,6 +6,8 @@ import type { Body_upload_container_file_docker_containers__container_name__file
 import type { ContainerConfigResponse } from '../models/ContainerConfigResponse';
 import type { ContainerCreate } from '../models/ContainerCreate';
 import type { ContainerCreateResponse } from '../models/ContainerCreateResponse';
+import type { ContainerDependencyCheckRequest } from '../models/ContainerDependencyCheckRequest';
+import type { ContainerDependencyCheckResponse } from '../models/ContainerDependencyCheckResponse';
 import type { ContainerListResponse } from '../models/ContainerListResponse';
 import type { ContainerResponse } from '../models/ContainerResponse';
 import type { FileUploadResponse } from '../models/FileUploadResponse';
@@ -198,6 +200,25 @@ export class DockerService {
             path: {
                 'container_id': containerId,
             },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Check Container Dependencies
+     * @param requestBody
+     * @returns ContainerDependencyCheckResponse Successful Response
+     * @throws ApiError
+     */
+    public static checkContainerDependenciesDockerContainersDependenciesCheckPost(
+        requestBody: ContainerDependencyCheckRequest,
+    ): CancelablePromise<ContainerDependencyCheckResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/docker/containers/dependencies/check',
+            body: requestBody,
+            mediaType: 'application/json',
             errors: {
                 422: `Validation Error`,
             },

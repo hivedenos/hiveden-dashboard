@@ -1,7 +1,20 @@
 "use server";
 
 import "@/lib/api"; // Ensure client config
-import type { BaseResponse, ContainerConfigResponse, ContainerCreate, ContainerCreateResponse, ContainerResponse, DataResponse, FileUploadResponse, ImageLayerListResponse, ImageListResponse, NetworkCreate, SuccessResponse } from "@/lib/client";
+import type {
+  BaseResponse,
+  ContainerConfigResponse,
+  ContainerCreate,
+  ContainerCreateResponse,
+  ContainerDependencyCheckResponse,
+  ContainerResponse,
+  DataResponse,
+  FileUploadResponse,
+  ImageLayerListResponse,
+  ImageListResponse,
+  NetworkCreate,
+  SuccessResponse,
+} from "@/lib/client";
 import { DockerImagesService, DockerService } from "@/lib/client";
 import { revalidatePath } from "next/cache";
 
@@ -25,6 +38,10 @@ export async function listContainers(): Promise<DataResponse> {
 
 export async function createContainer(container: ContainerCreate): Promise<DataResponse> {
   return DockerService.createNewContainerDockerContainersPost(container);
+}
+
+export async function checkContainerDependencies(dependencies: string[]): Promise<ContainerDependencyCheckResponse> {
+  return DockerService.checkContainerDependenciesDockerContainersDependenciesCheckPost({ dependencies });
 }
 
 export async function uploadContainerFile(containerName: string, path: string, formData: FormData): Promise<FileUploadResponse> {

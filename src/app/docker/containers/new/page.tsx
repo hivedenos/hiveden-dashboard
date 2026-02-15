@@ -1,6 +1,6 @@
 "use client";
 
-import { ContainerForm } from "@/components/Docker/ContainerForm";
+import { ContainerForm, DependencyStatusSnapshot } from "@/components/Docker/ContainerForm";
 import { useContainerForm } from "@/hooks/useContainerForm";
 import { handleCreateContainer } from "@/lib/container-submission";
 import { Alert, Badge, Box, Button, Container, Divider, Grid, Group, LoadingOverlay, Paper, Stack, Text, ThemeIcon, Title } from "@mantine/core";
@@ -12,6 +12,15 @@ export default function NewContainerPage() {
   const form = useContainerForm();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [dependencyStatus, setDependencyStatus] = useState<DependencyStatusSnapshot>({
+    hasDependencies: false,
+    isChecking: false,
+    allSatisfied: true,
+    missing: [],
+    hasError: false,
+  });
+
+  const isDeployBlocked = dependencyStatus.hasDependencies && (dependencyStatus.isChecking || !dependencyStatus.allSatisfied);
 
   return (
     <Container size="xl" py="xl">
@@ -94,7 +103,7 @@ export default function NewContainerPage() {
             Start with General Configuration first, then move top to bottom for faster setup and fewer validation issues.
           </Alert>
 
-          <ContainerForm form={form} />
+          <ContainerForm form={form} onDependenciesStatusChange={setDependencyStatus} />
 
           <Paper withBorder radius="md" p="md">
             <Group justify="space-between" align="center" gap="sm">
@@ -109,12 +118,22 @@ export default function NewContainerPage() {
                   leftSection={<IconRocket size={16} />}
                   onClick={() => handleCreateContainer(form.formData, form.labelsList, router, setLoading)}
                   loading={loading}
+                  disabled={isDeployBlocked}
                 >
                   Deploy Container
                 </Button>
               </Group>
             </Group>
           </Paper>
+          {isDeployBlocked && (
+            <Alert color="red" variant="light" radius="md" icon={<IconAlertCircle size={16} />} title="Dependencies are not satisfied">
+              {dependencyStatus.isChecking
+                ? "Dependency check is still running. Wait for completion before deploying."
+                : dependencyStatus.hasError
+                  ? "Dependency check failed. Re-check dependencies before deploying."
+                  : `Missing dependencies: ${dependencyStatus.missing.join(", ")}`}
+            </Alert>
+          )}
           {loading && (
             <Alert color="blue" variant="light" radius="md" icon={<IconAlertCircle size={16} />}>
               Deployment request in progress. Please wait while container creation is submitted.

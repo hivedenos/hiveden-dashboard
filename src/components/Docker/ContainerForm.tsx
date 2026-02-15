@@ -1,20 +1,29 @@
-import { uploadContainerFile } from "@/actions/docker";
+import { checkContainerDependencies, uploadContainerFile } from "@/actions/docker";
 import { searchDockerImages, getDockerImageTags } from "@/actions/docker-hub";
 import { getAllDevices } from "@/actions/info";
 import { getComprehensiveLocations } from "@/actions/system";
 import { UseContainerFormReturn } from "@/hooks/useContainerForm";
 import { FilesystemLocation } from "@/lib/client";
-import { ActionIcon, Autocomplete, Box, Button, Checkbox, Group, NumberInput, Paper, Select, Stack, Text, TextInput, Title } from "@mantine/core";
+import { ActionIcon, Alert, Autocomplete, Badge, Box, Button, Checkbox, Group, NumberInput, Paper, Select, Stack, Text, TextInput, Title } from "@mantine/core";
 import { useDebouncedValue } from "@mantine/hooks";
-import { IconPlus, IconTrash, IconUpload } from "@tabler/icons-react";
+import { IconAlertCircle, IconCheck, IconPlus, IconRefresh, IconTrash, IconUpload, IconX } from "@tabler/icons-react";
 import { useEffect, useRef, useState } from "react";
 import { DatabaseConfig } from "./DatabaseConfig";
 
 interface ContainerFormProps {
   form: UseContainerFormReturn;
+  onDependenciesStatusChange?: (status: DependencyStatusSnapshot) => void;
 }
 
-export function ContainerForm({ form }: ContainerFormProps) {
+export interface DependencyStatusSnapshot {
+  hasDependencies: boolean;
+  isChecking: boolean;
+  allSatisfied: boolean;
+  missing: string[];
+  hasError: boolean;
+}
+
+export function ContainerForm({ form, onDependenciesStatusChange }: ContainerFormProps) {
   const {
     formData,
     labelsList,
@@ -199,6 +208,82 @@ export function ContainerForm({ form }: ContainerFormProps) {
       handleChange('image', `${newName}:${newTag}`);
   };
 
+  const [dependencyInput, setDependencyInput] = useState("");
+  const [dependenciesChecking, setDependenciesChecking] = useState(false);
+  const [dependenciesError, setDependenciesError] = useState<string | null>(null);
+  const [dependencyItems, setDependencyItems] = useState<{ name: string; exists: boolean }[]>([]);
+  const [missingDependencies, setMissingDependencies] = useState<string[]>([]);
+  const [allDependenciesSatisfied, setAllDependenciesSatisfied] = useState(true);
+
+  const normalizedDependencies = (formData.dependencies || [])
+    .map((name) => name.trim())
+    .filter(Boolean);
+  const hasDependencies = normalizedDependencies.length > 0;
+  const dependencySignature = normalizedDependencies.join("||");
+  const [debouncedDependencySignature] = useDebouncedValue(dependencySignature, 450);
+
+  const updateDependencies = (nextDependencies: string[]) => {
+    const uniqueDependencies = [...new Set(nextDependencies.map((name) => name.trim()).filter(Boolean))];
+    handleChange("dependencies", uniqueDependencies);
+  };
+
+  const addDependency = () => {
+    if (!dependencyInput.trim()) return;
+    updateDependencies([...(formData.dependencies || []), dependencyInput]);
+    setDependencyInput("");
+  };
+
+  const removeDependency = (dependencyName: string) => {
+    updateDependencies((formData.dependencies || []).filter((dep) => dep.trim() !== dependencyName));
+  };
+
+  const runDependencyCheck = async (dependencies: string[]) => {
+    const uniqueDependencies = [...new Set(dependencies.map((name) => name.trim()).filter(Boolean))];
+    if (uniqueDependencies.length === 0) {
+      setDependenciesError(null);
+      setDependencyItems([]);
+      setMissingDependencies([]);
+      setAllDependenciesSatisfied(true);
+      return;
+    }
+
+    setDependenciesChecking(true);
+    setDependenciesError(null);
+
+    try {
+      const response = await checkContainerDependencies(uniqueDependencies);
+      const result = response.data;
+      if (!result) {
+        throw new Error("Missing dependency check data in response.");
+      }
+      setDependencyItems(result.items || []);
+      setMissingDependencies(result.missing || []);
+      setAllDependenciesSatisfied(result.all_satisfied);
+    } catch (error) {
+      setDependenciesError(error instanceof Error ? error.message : "Failed to check container dependencies.");
+      setDependencyItems(uniqueDependencies.map((name) => ({ name, exists: false })));
+      setMissingDependencies(uniqueDependencies);
+      setAllDependenciesSatisfied(false);
+    } finally {
+      setDependenciesChecking(false);
+    }
+  };
+
+  useEffect(() => {
+    const dependenciesFromSignature = debouncedDependencySignature ? debouncedDependencySignature.split("||").filter(Boolean) : [];
+    void runDependencyCheck(dependenciesFromSignature);
+  }, [debouncedDependencySignature]);
+
+  useEffect(() => {
+    onDependenciesStatusChange?.({
+      hasDependencies,
+      isChecking: dependenciesChecking,
+      allSatisfied: !hasDependencies || (allDependenciesSatisfied && !dependenciesError),
+      missing: missingDependencies,
+      hasError: !!dependenciesError,
+    });
+  }, [allDependenciesSatisfied, dependenciesChecking, dependenciesError, hasDependencies, missingDependencies, onDependenciesStatusChange]);
+
   return (
     <Box pos="relative">
       {/* Hidden File Input */}
@@ -287,6 +372,95 @@ export function ContainerForm({ form }: ContainerFormProps) {
             <Button variant="light" leftSection={<IconPlus size={16} />} onClick={addCommandArg} size="xs" w="max-content">
               Add Argument
             </Button>
+          </Stack>
+        </Paper>
+
+        <Paper p="md" withBorder radius="md">
+          <Group justify="space-between" align="center" mb="md">
+            <Title order={4}>Dependencies</Title>
+            <Button variant="light" size="xs" leftSection={<IconRefresh size={14} />} onClick={() => runDependencyCheck(normalizedDependencies)} loading={dependenciesChecking} disabled={!hasDependencies}>
+              Re-check
+            </Button>
+          </Group>
+
+          <Stack>
+            <Group grow preventGrowOverflow={false} wrap="nowrap">
+              <TextInput
+                placeholder="Dependency container name (e.g. postgres)"
+                value={dependencyInput}
+                onChange={(event) => setDependencyInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    addDependency();
+                  }
+                }}
+              />
+              <Button variant="light" leftSection={<IconPlus size={16} />} onClick={addDependency}>
+                Add
+              </Button>
+            </Group>
+
+            {hasDependencies && (
+              <Group gap="xs">
+                {normalizedDependencies.map((depName) => (
+                  <Badge key={depName} variant="light" rightSection={<ActionIcon size="xs" radius="xl" variant="transparent" color="gray" onClick={() => removeDependency(depName)} aria-label={`Remove ${depName}`}><IconX size={10} /></ActionIcon>}>
+                    {depName}
+                  </Badge>
+                ))}
+              </Group>
+            )}
+
+            {!hasDependencies && (
+              <Text size="sm" c="dimmed">
+                No dependencies configured. Add container names that must exist before deployment.
+              </Text>
+            )}
+
+            {hasDependencies && (
+              <Stack gap="xs">
+                {normalizedDependencies.map((depName) => {
+                  const item = dependencyItems.find((entry) => entry.name === depName);
+                  const exists = item?.exists || false;
+                  return (
+                    <Group key={`${depName}-status`} justify="space-between">
+                      <Text size="sm">{depName}</Text>
+                      {dependenciesChecking ? (
+                        <Badge color="blue" variant="light">
+                          Checking
+                        </Badge>
+                      ) : exists ? (
+                        <Badge color="green" variant="light" leftSection={<IconCheck size={12} />}>
+                          Available
+                        </Badge>
+                      ) : (
+                        <Badge color="red" variant="light" leftSection={<IconAlertCircle size={12} />}>
+                          Not found
+                        </Badge>
+                      )}
+                    </Group>
+                  );
+                })}
+              </Stack>
+            )}
+
+            {dependenciesError && (
+              <Alert color="yellow" variant="light" title="Dependency check failed" icon={<IconAlertCircle size={16} />}>
+                {dependenciesError}
+              </Alert>
+            )}
+
+            {!dependenciesError && hasDependencies && !dependenciesChecking && allDependenciesSatisfied && (
+              <Alert color="green" variant="light" title="Dependencies satisfied" icon={<IconCheck size={16} />}>
+                All dependency containers were found and are ready for deployment.
+              </Alert>
+            )}
+
+            {!dependenciesError && hasDependencies && !dependenciesChecking && !allDependenciesSatisfied && (
+              <Alert color="red" variant="light" title="Missing dependencies" icon={<IconAlertCircle size={16} />}>
+                Missing: {missingDependencies.join(", ")}
+              </Alert>
+            )}
           </Stack>
         </Paper>
 

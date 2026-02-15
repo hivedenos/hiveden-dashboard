@@ -65,6 +65,7 @@ export function CreateDockerContainers({ containers, onComplete }: CreateDockerC
           ...containerData,
           // Ensure command is null if empty array
           command: containerData.command && containerData.command.length > 0 ? containerData.command : null,
+          dependencies: containerData.dependencies && containerData.dependencies.length > 0 ? containerData.dependencies : null,
         };
 
         const payload: ContainerCreate = {

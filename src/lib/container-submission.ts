@@ -12,7 +12,6 @@ export async function handleCreateContainer(formData: ContainerFormState, labels
     });
 
     // Destructure to remove form-specific fields
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { ingressSubdomainChecked, ...restFormData } = formData;
 
     // Ensure ingress_config is only sent if fully valid and enabled
@@ -23,6 +22,7 @@ export async function handleCreateContainer(formData: ContainerFormState, labels
       ingress_config: finalIngressConfig,
       labels: labelsRecord,
       command: formData.command.length > 0 ? formData.command : null,
+      dependencies: formData.dependencies && formData.dependencies.length > 0 ? formData.dependencies : null,
     };
 
     const payload: ContainerCreate = {

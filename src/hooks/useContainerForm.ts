@@ -44,6 +44,7 @@ export function useContainerForm(initialValues?: Partial<ContainerFormState>): U
     name: '',
     image: '',
     command: [],
+    dependencies: [],
     env: [],
     ports: [],
     mounts: [],
@@ -229,4 +230,3 @@ export function useContainerForm(initialValues?: Partial<ContainerFormState>): U
     updateLabel,
   };
 }
-
