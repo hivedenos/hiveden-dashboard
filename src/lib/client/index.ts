@@ -7,6 +7,14 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export type { AppDetail } from './models/AppDetail';
+export type { AppDetailResponse } from './models/AppDetailResponse';
+export type { AppInstallRequest } from './models/AppInstallRequest';
+export type { AppInstallResponse } from './models/AppInstallResponse';
+export type { AppListResponse } from './models/AppListResponse';
+export type { AppSummary } from './models/AppSummary';
+export type { AppSyncResponse } from './models/AppSyncResponse';
+export type { AppUninstallRequest } from './models/AppUninstallRequest';
 export type { Backup } from './models/Backup';
 export type { BackupConfig } from './models/BackupConfig';
 export type { BackupCreateRequest } from './models/BackupCreateRequest';
@@ -134,6 +142,7 @@ export type { ZFSDatasetCreate } from './models/ZFSDatasetCreate';
 export type { ZFSPool } from './models/ZFSPool';
 export type { ZFSPoolCreate } from './models/ZFSPoolCreate';
 
+export { AppStoreService } from './services/AppStoreService';
 export { BackupsService } from './services/BackupsService';
 export { ConfigService } from './services/ConfigService';
 export { DatabaseService } from './services/DatabaseService';
