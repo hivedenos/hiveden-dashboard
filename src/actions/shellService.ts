@@ -1,6 +1,7 @@
 "use server";
 
-const BASE_URL = "http://localhost:8000";
+import "@/lib/api";
+import { ShellService, ShellType } from "@/lib/client";
 
 export interface ShellSession {
   session_id: string;
@@ -28,18 +29,24 @@ export async function createSession(
     working_dir?: string;
   },
 ): Promise<ShellSession> {
-  const response = await fetch(`${BASE_URL}/shell/sessions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ type, target, ...options }),
+  const shellTypeMap: Record<ShellSession["shell_type"], ShellType> = {
+    docker: ShellType.DOCKER,
+    ssh: ShellType.SSH,
+    local: ShellType.LOCAL,
+  };
+
+  const response = await ShellService.createShellSessionShellSessionsPost({
+    shell_type: shellTypeMap[type],
+    target,
+    user: options?.user,
+    working_dir: options?.working_dir,
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to create session: ${response.statusText}`);
+  if (!response.data || typeof response.data !== "object" || !("session_id" in response.data)) {
+    throw new Error("Failed to create session: Invalid response payload");
   }
 
-  const data = await response.json();
-  return data.data;
+  return response.data as ShellSession;
 }
 
 export async function createDockerSession(
@@ -49,18 +56,10 @@ export async function createDockerSession(
     working_dir?: string;
   },
 ): Promise<ShellSession> {
-  const response = await fetch(`${BASE_URL}/shell/docker/${containerId}/shell`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(options || {}),
+  return createSession("docker", containerId, {
+    user: options?.user,
+    working_dir: options?.working_dir,
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to create session: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  return data.data;
 }
 
 export async function createLXCSession(
@@ -70,63 +69,40 @@ export async function createLXCSession(
     working_dir?: string;
   },
 ): Promise<ShellSession> {
-  const response = await fetch(`${BASE_URL}/shell/lxc/${containerName}/shell`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(options || {}),
+  return createSession("ssh", containerName, {
+    user: options?.user,
+    working_dir: options?.working_dir,
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to create LXC session: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  return data.data;
 }
 
 export async function listSessions(): Promise<ShellSession[]> {
-  const response = await fetch(`${BASE_URL}/shell/sessions`);
-
-  if (!response.ok) {
-    throw new Error(`Failed to list sessions: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  return data.data;
+  const response = await ShellService.listShellSessionsShellSessionsGet(true);
+  return (response.data as ShellSession[]) ?? [];
 }
 
 export async function getSession(sessionId: string): Promise<ShellSession> {
-  const response = await fetch(`${BASE_URL}/shell/sessions/${sessionId}`);
+  const response = await ShellService.getShellSessionShellSessionsSessionIdGet(sessionId);
 
-  if (!response.ok) {
-    throw new Error(`Failed to get session: ${response.statusText}`);
+  if (!response.data || typeof response.data !== "object" || !("session_id" in response.data)) {
+    throw new Error("Failed to get session: Invalid response payload");
   }
 
-  const data = await response.json();
-  return data.data;
+  return response.data as ShellSession;
 }
 
 export async function closeSession(sessionId: string): Promise<void> {
-  const response = await fetch(`${BASE_URL}/shell/sessions/${sessionId}`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to close session: ${response.statusText}`);
-  }
+  await ShellService.closeShellSessionShellSessionsSessionIdDelete(sessionId);
 }
 
 export async function checkPackage(packageName: string, packageManager: string = "auto"): Promise<boolean> {
-  const response = await fetch(`${BASE_URL}/shell/packages/check`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ package_name: packageName, package_manager: packageManager }),
+  const response = await ShellService.checkPackageShellPackagesCheckPost({
+    package_name: packageName,
+    package_manager: packageManager,
   });
 
-  if (!response.ok) {
-    throw new Error(`Failed to check package: ${response.statusText}`);
+  if (!response.data || typeof response.data !== "object" || !("installed" in response.data)) {
+    throw new Error("Failed to check package: Invalid response payload");
   }
 
-  const data = await response.json();
-  return data.data.installed;
+  return Boolean((response.data as { installed?: boolean }).installed);
 }

@@ -5,8 +5,8 @@ import { ActionIcon, Badge, Box, Card, Group, Text } from "@mantine/core";
 import { IconTrash, IconX } from "@tabler/icons-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import type { FitAddon } from "@xterm/addon-fit";
-import type { Terminal as XTerm } from "xterm";
-import "xterm/css/xterm.css";
+import type { Terminal as XTerm } from "@xterm/xterm";
+import "@xterm/xterm/css/xterm.css";
 
 type TerminalMode = "interactive" | "stream";
 type ConnectionState = "connecting" | "connected" | "disconnected" | "error" | "completed";
@@ -70,7 +70,7 @@ export const Terminal: React.FC<TerminalProps> = ({
 
     const initTerminal = async () => {
       const [{ Terminal: XTermConstructor }, { FitAddon: FitAddonConstructor }, { WebLinksAddon: WebLinksAddonConstructor }] = await Promise.all([
-        import("xterm"),
+        import("@xterm/xterm"),
         import("@xterm/addon-fit"),
         import("@xterm/addon-web-links"),
       ]);
@@ -230,13 +230,10 @@ export const Terminal: React.FC<TerminalProps> = ({
       if (!isReadOnly) {
         dataDisposable = term.onData((data) => {
           if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
-          // Some shell backends expect Ctrl+H (\b) instead of DEL (\x7f) for backspace.
-          // Normalize this so Backspace works reliably in interactive mode.
-          const normalizedInput = data === "\x7f" ? "\b" : data;
           wsRef.current.send(
             JSON.stringify({
               type: "input",
-              data: normalizedInput,
+              data,
             }),
           );
         });

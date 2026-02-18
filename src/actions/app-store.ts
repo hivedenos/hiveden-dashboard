@@ -2,8 +2,8 @@
 
 import '@/lib/api';
 import { revalidatePath } from 'next/cache';
-import { AppStoreService } from '@/lib/client';
-import type { AppInstallRequest, AppUninstallRequest } from '@/lib/client';
+import { AppStoreService, DockerService } from '@/lib/client';
+import type { AppAdoptRequest, AppInstallRequest, AppUninstallRequest, ContainerListResponse } from '@/lib/client';
 
 export async function listApps(params?: {
   q?: string;
@@ -38,6 +38,17 @@ export async function syncAppCatalog() {
 export async function installApp(appId: string, payload?: AppInstallRequest) {
   const result = await AppStoreService.installAppAppStoreAppsAppIdInstallPost(appId, payload ?? {});
   revalidatePath('/app-store');
+  return result;
+}
+
+export async function listContainersForAdoption(): Promise<ContainerListResponse> {
+  return DockerService.listAllContainersDockerContainersGet();
+}
+
+export async function adoptAppContainers(appId: string, payload?: AppAdoptRequest) {
+  const result = await AppStoreService.adoptExistingAppContainersAppStoreAppsAppIdAdoptPost(appId, payload ?? {});
+  revalidatePath('/app-store');
+  revalidatePath(`/app-store/${encodeURIComponent(appId)}`);
   return result;
 }
 

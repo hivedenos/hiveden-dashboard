@@ -49,7 +49,7 @@ class MockFitAddon {
 
 class MockWebLinksAddon {}
 
-vi.mock("xterm", () => ({
+vi.mock("@xterm/xterm", () => ({
   Terminal: MockXTerm,
 }));
 

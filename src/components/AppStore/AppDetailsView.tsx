@@ -1,8 +1,8 @@
 "use client";
 
-import { getAppDetail, getComposePreview, installApp, uninstallApp } from "@/actions/app-store";
+import { adoptAppContainers, getAppDetail, getComposePreview, installApp, listContainersForAdoption, uninstallApp } from "@/actions/app-store";
 import { Terminal } from "@/components/Terminal/Terminal";
-import type { AppDetail, AppInstallRequest, AppUninstallRequest } from "@/lib/client";
+import type { AppAdoptRequest, AppDetail, AppInstallRequest, AppUninstallRequest } from "@/lib/client";
 import { getWebSocketUrl } from "@/lib/shellClient";
 import {
   ActionIcon,
@@ -18,6 +18,7 @@ import {
   Modal,
   Paper,
   ScrollArea,
+  Select,
   Stack,
   Text,
   Textarea,
@@ -30,6 +31,7 @@ import {
   IconChevronRight,
   IconDownload,
   IconExternalLink,
+  IconLink,
   IconRefresh,
   IconSearch,
   IconTrash,
@@ -52,7 +54,7 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
   const [detail, setDetail] = useState<AppDetail>(initialDetail);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [refreshingDetail, setRefreshingDetail] = useState(false);
-  const [activeAction, setActiveAction] = useState<"install" | "uninstall" | null>(null);
+  const [activeAction, setActiveAction] = useState<"install" | "uninstall" | "adopt" | null>(null);
 
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [autoInstallPrereqs, setAutoInstallPrereqs] = useState(true);
@@ -62,6 +64,12 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
   const [deleteData, setDeleteData] = useState(false);
   const [deleteDatabases, setDeleteDatabases] = useState(false);
   const [deleteDns, setDeleteDns] = useState(false);
+
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [containerOptions, setContainerOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
+  const [containersLoading, setContainersLoading] = useState(false);
+  const [containersError, setContainersError] = useState<string | null>(null);
 
   const [terminalOpen, setTerminalOpen] = useState(false);
   const [terminalJobId, setTerminalJobId] = useState<string | null>(null);
@@ -164,6 +172,86 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
       setComposeError(getErrorMessage(error, "Failed to load compose preview"));
     } finally {
       setComposeLoading(false);
+    }
+  };
+
+  const loadContainersForAdoption = useCallback(async () => {
+    setContainersLoading(true);
+    setContainersError(null);
+
+    try {
+      const response = await listContainersForAdoption();
+      const options = response.data.map((container) => {
+        const containerName = container.Name?.replace(/^\/+/, "") || container.Id.slice(0, 12);
+        const state = container.State || "unknown";
+
+        return {
+          value: container.Id,
+          label: `${containerName} (${container.Id.slice(0, 12)}) · ${state}`,
+        };
+      });
+
+      setContainerOptions(options);
+      setSelectedContainerId((current) => {
+        if (!current) return null;
+        return options.some((option) => option.value === current) ? current : null;
+      });
+    } catch (error) {
+      setContainerOptions([]);
+      setSelectedContainerId(null);
+      setContainersError(getErrorMessage(error, "Failed to load containers"));
+    } finally {
+      setContainersLoading(false);
+    }
+  }, []);
+
+  const openLinkContainerModal = async () => {
+    setLinkModalOpen(true);
+    setSelectedContainerId(null);
+    await loadContainersForAdoption();
+  };
+
+  const handleAdopt = async () => {
+    if (!selectedContainerId) {
+      notifications.show({
+        title: "Container required",
+        message: "Select a container to link with this app.",
+        color: "yellow",
+      });
+      return;
+    }
+
+    setActiveAction("adopt");
+    try {
+      const payload: AppAdoptRequest = {
+        container_names_or_ids: [selectedContainerId],
+      };
+
+      const response = await adoptAppContainers(detail.app_id, payload);
+      const adoptedCount = response.data?.containers?.length ?? 0;
+
+      notifications.show({
+        title: "Container linked",
+        message:
+          response.message ||
+          (adoptedCount > 0
+            ? `${detail.title} linked to ${adoptedCount} container${adoptedCount === 1 ? "" : "s"}.`
+            : `${detail.title} was linked to the selected container.`),
+        color: "green",
+      });
+
+      setLinkModalOpen(false);
+      setSelectedContainerId(null);
+
+      await refreshDetail();
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: getErrorMessage(error, "Failed to link existing container"),
+        color: "red",
+      });
+    } finally {
+      setActiveAction(null);
     }
   };
 
@@ -282,6 +370,19 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
           >
             Refresh details
           </Button>
+          {!detail.installed && (
+            <Button
+              size="md"
+              variant="default"
+              leftSection={<IconLink size={18} />}
+              onClick={() => {
+                void openLinkContainerModal();
+              }}
+              loading={activeAction === "adopt"}
+            >
+              Link existing container
+            </Button>
+          )}
           <Button
             size="md"
             color={detail.installed ? "red" : "blue"}
@@ -688,6 +789,64 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
             <Button onClick={handleInstall} loading={activeAction === "install"}>
               Install
             </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={linkModalOpen}
+        onClose={() => setLinkModalOpen(false)}
+        title={`Link existing container to ${detail.title}`}
+        centered
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Select an existing Docker container to adopt into this app.
+          </Text>
+
+          {containersError && (
+            <Alert color="red" variant="light" title="Unable to load containers">
+              {containersError}
+            </Alert>
+          )}
+
+          <Select
+            label="Container"
+            placeholder={containersLoading ? "Loading containers..." : "Select a container"}
+            data={containerOptions}
+            value={selectedContainerId}
+            onChange={setSelectedContainerId}
+            searchable
+            disabled={containersLoading}
+            nothingFoundMessage="No containers found"
+          />
+
+          {!containersLoading && containerOptions.length === 0 && !containersError && (
+            <Alert color="gray" variant="light" title="No containers available">
+              No containers were found to link.
+            </Alert>
+          )}
+
+          <Group justify="space-between">
+            <Button
+              variant="subtle"
+              leftSection={<IconRefresh size={16} />}
+              onClick={() => {
+                void loadContainersForAdoption();
+              }}
+              loading={containersLoading}
+            >
+              Refresh list
+            </Button>
+
+            <Group gap="xs">
+              <Button variant="default" onClick={() => setLinkModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleAdopt} loading={activeAction === "adopt"} disabled={!selectedContainerId || containersLoading}>
+                Link container
+              </Button>
+            </Group>
           </Group>
         </Stack>
       </Modal>

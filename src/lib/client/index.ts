@@ -7,6 +7,10 @@ export { CancelablePromise, CancelError } from './core/CancelablePromise';
 export { OpenAPI } from './core/OpenAPI';
 export type { OpenAPIConfig } from './core/OpenAPI';
 
+export type { AppAdoptedContainer } from './models/AppAdoptedContainer';
+export type { AppAdoptRequest } from './models/AppAdoptRequest';
+export type { AppAdoptResponse } from './models/AppAdoptResponse';
+export type { AppAdoptResult } from './models/AppAdoptResult';
 export type { AppDetail } from './models/AppDetail';
 export type { AppDetailResponse } from './models/AppDetailResponse';
 export type { AppInstallRequest } from './models/AppInstallRequest';

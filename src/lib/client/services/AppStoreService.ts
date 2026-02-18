@@ -2,6 +2,8 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AppAdoptRequest } from '../models/AppAdoptRequest';
+import type { AppAdoptResponse } from '../models/AppAdoptResponse';
 import type { AppDetailResponse } from '../models/AppDetailResponse';
 import type { AppInstallRequest } from '../models/AppInstallRequest';
 import type { AppInstallResponse } from '../models/AppInstallResponse';
@@ -124,6 +126,30 @@ export class AppStoreService {
         return __request(OpenAPI, {
             method: 'POST',
             url: '/app-store/apps/{app_id}/uninstall',
+            path: {
+                'app_id': appId,
+            },
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Adopt Existing App Containers
+     * @param appId
+     * @param requestBody
+     * @returns AppAdoptResponse Successful Response
+     * @throws ApiError
+     */
+    public static adoptExistingAppContainersAppStoreAppsAppIdAdoptPost(
+        appId: string,
+        requestBody: AppAdoptRequest,
+    ): CancelablePromise<AppAdoptResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/app-store/apps/{app_id}/adopt',
             path: {
                 'app_id': appId,
             },
