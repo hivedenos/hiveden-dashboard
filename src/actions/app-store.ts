@@ -12,6 +12,39 @@ import type {
   ContainerListResponse,
 } from '@/lib/client';
 
+function buildComposePreviewCandidates(composeUrl: URL) {
+  const candidates = [composeUrl.toString()];
+
+  if (composeUrl.hostname !== 'raw.githubusercontent.com') {
+    return candidates;
+  }
+
+  const segments = composeUrl.pathname.split('/').filter(Boolean);
+  if (segments.length < 6) {
+    return candidates;
+  }
+
+  const filename = segments[segments.length - 1];
+  const directorySegments = segments.slice(0, -1);
+
+  for (let duplicateLength = Math.floor(directorySegments.length / 2); duplicateLength >= 1; duplicateLength -= 1) {
+    const prefix = directorySegments.slice(0, -duplicateLength * 2);
+    const firstDuplicate = directorySegments.slice(-duplicateLength * 2, -duplicateLength);
+    const secondDuplicate = directorySegments.slice(-duplicateLength);
+
+    if (firstDuplicate.join('/') !== secondDuplicate.join('/')) {
+      continue;
+    }
+
+    const deduplicatedUrl = new URL(composeUrl.toString());
+    deduplicatedUrl.pathname = `/${[...prefix, ...secondDuplicate, filename].join('/')}`;
+    candidates.push(deduplicatedUrl.toString());
+    break;
+  }
+
+  return candidates;
+}
+
 export async function listApps(params?: {
   q?: string;
   category?: string;
@@ -93,15 +126,29 @@ export async function getComposePreview(composeUrl: string) {
     throw new Error('Unsupported compose URL protocol');
   }
 
-  const response = await fetch(url.toString(), {
-    cache: 'no-store',
+  const requestOptions = {
+    cache: 'no-store' as const,
     headers: {
       Accept: 'text/plain, text/yaml, text/x-yaml, application/x-yaml, */*;q=0.8',
     },
-  });
+  };
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch compose file (${response.status})`);
+  let response: Response | null = null;
+  let failureStatus: number | null = null;
+
+  for (const candidateUrl of buildComposePreviewCandidates(url)) {
+    const candidateResponse = await fetch(candidateUrl, requestOptions);
+
+    if (candidateResponse.ok) {
+      response = candidateResponse;
+      break;
+    }
+
+    failureStatus = candidateResponse.status;
+  }
+
+  if (!response) {
+    throw new Error(`Failed to fetch compose file (${failureStatus ?? 'unknown'})`);
   }
 
   const rawContent = await response.text();
