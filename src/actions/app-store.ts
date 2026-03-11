@@ -3,11 +3,19 @@
 import '@/lib/api';
 import { revalidatePath } from 'next/cache';
 import { AppStoreService, DockerService } from '@/lib/client';
-import type { AppAdoptRequest, AppInstallRequest, AppUninstallRequest, ContainerListResponse } from '@/lib/client';
+import type {
+  AppAdoptRequest,
+  AppCacheClearRequest,
+  AppInstallRequest,
+  AppPromotionRequestCreate,
+  AppUninstallRequest,
+  ContainerListResponse,
+} from '@/lib/client';
 
 export async function listApps(params?: {
   q?: string;
   category?: string;
+  channel?: string;
   installed?: boolean;
   limit?: number;
   offset?: number;
@@ -15,6 +23,7 @@ export async function listApps(params?: {
   return AppStoreService.listAppsAppStoreAppsGet(
     params?.q ?? null,
     params?.category ?? null,
+    params?.channel ?? null,
     typeof params?.installed === 'boolean' ? params.installed : null,
     params?.limit ?? 50,
     params?.offset,
@@ -54,6 +63,19 @@ export async function adoptAppContainers(appId: string, payload?: AppAdoptReques
 
 export async function uninstallApp(appId: string, payload?: AppUninstallRequest) {
   const result = await AppStoreService.uninstallAppAppStoreAppsAppIdUninstallPost(appId, payload ?? {});
+  revalidatePath('/app-store');
+  return result;
+}
+
+export async function requestAppPromotion(appId: string, payload?: AppPromotionRequestCreate) {
+  const result = await AppStoreService.requestAppPromotionAppStoreAppsAppIdPromotionRequestPost(appId, payload ?? {});
+  revalidatePath('/app-store');
+  revalidatePath(`/app-store/${encodeURIComponent(appId)}`);
+  return result;
+}
+
+export async function clearCatalogCache(payload?: AppCacheClearRequest) {
+  const result = await AppStoreService.clearCatalogCacheAppStoreCacheClearPost(payload ?? {});
   revalidatePath('/app-store');
   return result;
 }

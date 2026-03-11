@@ -7,11 +7,13 @@ import { AppStoreCatalog } from "./AppStoreCatalog";
 const mockListApps = vi.fn();
 const mockListInstalledApps = vi.fn();
 const mockSyncAppCatalog = vi.fn();
+const mockClearCatalogCache = vi.fn();
 
 vi.mock("@/actions/app-store", () => ({
   listApps: (...args: unknown[]) => mockListApps(...args),
   listInstalledApps: (...args: unknown[]) => mockListInstalledApps(...args),
   syncAppCatalog: (...args: unknown[]) => mockSyncAppCatalog(...args),
+  clearCatalogCache: (...args: unknown[]) => mockClearCatalogCache(...args),
 }));
 
 vi.mock("@/components/Terminal/Terminal", () => ({
@@ -59,11 +61,16 @@ function renderWithMantine(ui: React.ReactNode) {
 
 function createApp(index: number, installed = false): AppSummary {
   return {
+    catalog_id: `catalog-${index}`,
     app_id: `app-${index}`,
     title: `App ${index}`,
     category: index % 2 === 0 ? "Utility" : "Media",
+    channel: index % 2 === 0 ? "stable" : "incubator",
+    channel_label: index % 2 === 0 ? "Stable" : "Incubator",
     installed,
     description: `Description ${index}`,
+    installable: index % 2 === 0,
+    install_block_reason: index % 2 === 0 ? null : "Promotion required before install",
   };
 }
 
@@ -79,6 +86,7 @@ test("supports pagination for catalog results", async () => {
   });
   mockListInstalledApps.mockResolvedValue({ data: [] });
   mockSyncAppCatalog.mockResolvedValue({ data: { job_id: "" } });
+  mockClearCatalogCache.mockResolvedValue({ data: { cleared_entries: 0, job_id: "" } });
 
   renderWithMantine(<AppStoreCatalog initialApps={[]} />);
 
@@ -99,6 +107,7 @@ test("loads installed view using installed endpoint", async () => {
   mockListApps.mockResolvedValue({ data: [createApp(1)] });
   mockListInstalledApps.mockResolvedValue({ data: [createApp(2, true), createApp(3, true)] });
   mockSyncAppCatalog.mockResolvedValue({ data: { job_id: "" } });
+  mockClearCatalogCache.mockResolvedValue({ data: { cleared_entries: 0, job_id: "" } });
 
   renderWithMantine(<AppStoreCatalog initialApps={[]} />);
 
@@ -122,6 +131,7 @@ test("renders clickable cards that navigate to details", async () => {
   mockListApps.mockResolvedValue({ data: [app] });
   mockListInstalledApps.mockResolvedValue({ data: [] });
   mockSyncAppCatalog.mockResolvedValue({ data: { job_id: "" } });
+  mockClearCatalogCache.mockResolvedValue({ data: { cleared_entries: 0, job_id: "" } });
 
   renderWithMantine(<AppStoreCatalog initialApps={[app]} />);
 
@@ -132,4 +142,38 @@ test("renders clickable cards that navigate to details", async () => {
   const link = screen.getByRole("link", { name: "Open details for App 7" });
   expect(within(link).getByText("Installed")).toBeDefined();
   expect(link.getAttribute("href")).toBe("/app-store/app-7");
+});
+
+test("renders channel and installability metadata on cards", async () => {
+  mockListApps.mockResolvedValue({ data: [createApp(1)] });
+  mockListInstalledApps.mockResolvedValue({ data: [] });
+  mockSyncAppCatalog.mockResolvedValue({ data: { job_id: "" } });
+  mockClearCatalogCache.mockResolvedValue({ data: { cleared_entries: 0, job_id: "" } });
+
+  renderWithMantine(<AppStoreCatalog initialApps={[createApp(1)]} />);
+
+  await waitFor(() => {
+    expect(mockListApps).toHaveBeenCalled();
+  });
+
+  expect(screen.getAllByText("Incubator").length).toBeGreaterThan(0);
+  expect(screen.getByText("Promotion required before install")).toBeDefined();
+  const promoteLink = screen.getByRole("link", { name: "Promote App 1 via GitHub" });
+  expect(promoteLink.getAttribute("href")).toContain("template=promote-app.yaml");
+  expect(promoteLink.getAttribute("href")).toContain("app-name=App+1");
+});
+
+test("renders clear cache maintenance action", async () => {
+  mockListApps.mockResolvedValue({ data: [createApp(1)] });
+  mockListInstalledApps.mockResolvedValue({ data: [] });
+  mockSyncAppCatalog.mockResolvedValue({ data: { job_id: "" } });
+  mockClearCatalogCache.mockResolvedValue({ data: { cleared_entries: 12, job_id: "" } });
+
+  renderWithMantine(<AppStoreCatalog initialApps={[createApp(1)]} />);
+
+  await waitFor(() => {
+    expect(mockListApps).toHaveBeenCalled();
+  });
+
+  expect(screen.getByRole("button", { name: "Clear Cache" })).toBeDefined();
 });

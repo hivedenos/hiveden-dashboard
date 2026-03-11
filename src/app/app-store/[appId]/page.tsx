@@ -42,7 +42,7 @@ export default async function AppDetailsPage({ params }: AppDetailsPageProps) {
         <div>
           <Title order={1}>{appDetail.title}</Title>
           <Text c="dimmed" size="sm">
-            Review screenshots, description, and lifecycle actions for this application.
+            Review channel metadata, screenshots, and the install or promotion actions available for this app.
           </Text>
         </div>
 

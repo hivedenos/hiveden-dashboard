@@ -21,7 +21,7 @@ export default async function AppStorePage() {
         <div>
           <Title order={1}>App Store</Title>
           <Text c="dimmed" size="sm">
-            Browse available applications, review metadata, and manage install lifecycle.
+            Browse apps by channel, review incubator candidates, and manage install or promotion workflows.
           </Text>
         </div>
 

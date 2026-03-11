@@ -1,6 +1,13 @@
 "use client";
 
-import { adoptAppContainers, getAppDetail, getComposePreview, installApp, listContainersForAdoption, uninstallApp } from "@/actions/app-store";
+import {
+  adoptAppContainers,
+  getAppDetail,
+  getComposePreview,
+  installApp,
+  listContainersForAdoption,
+  uninstallApp,
+} from "@/actions/app-store";
 import { Terminal } from "@/components/Terminal/Terminal";
 import type { AppAdoptRequest, AppDetail, AppInstallRequest, AppUninstallRequest } from "@/lib/client";
 import { getWebSocketUrl } from "@/lib/shellClient";
@@ -31,7 +38,9 @@ import {
   IconChevronRight,
   IconDownload,
   IconExternalLink,
+  IconFlask,
   IconLink,
+  IconRocket,
   IconRefresh,
   IconSearch,
   IconTrash,
@@ -40,7 +49,15 @@ import {
 } from "@tabler/icons-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
-import { getErrorMessage, parseEnvOverrides } from "./appStoreUiUtils";
+import {
+  buildPromoteAppIssueUrl,
+  formatChannelLabel,
+  getChannelColor,
+  getErrorMessage,
+  getPromotionStatusLabel,
+  isIncubatorApp,
+  parseEnvOverrides,
+} from "./appStoreUiUtils";
 
 interface AppDetailsViewProps {
   initialDetail: AppDetail;
@@ -49,7 +66,6 @@ interface AppDetailsViewProps {
 const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
-
 export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
   const [detail, setDetail] = useState<AppDetail>(initialDetail);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -84,6 +100,11 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
   const [composeLoading, setComposeLoading] = useState(false);
   const [composeError, setComposeError] = useState<string | null>(null);
   const [composeTruncated, setComposeTruncated] = useState(false);
+
+  const isInstallBlocked = detail.installable === false;
+  const incubatorApp = isIncubatorApp(detail.channel);
+  const promotionStatusLabel = getPromotionStatusLabel(detail.promotion_request_status);
+  const promotionIssueUrl = useMemo(() => buildPromoteAppIssueUrl(detail), [detail]);
 
   const screenshots = useMemo(() => {
     const candidates = detail.image_urls?.filter((url): url is string => !!url) || [];
@@ -256,6 +277,15 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
   };
 
   const handleInstall = async () => {
+    if (isInstallBlocked) {
+      notifications.show({
+        title: "Installation unavailable",
+        message: detail.install_block_reason || "This app cannot be installed right now.",
+        color: "yellow",
+      });
+      return;
+    }
+
     setActiveAction("install");
     try {
       const payload: AppInstallRequest = {
@@ -370,7 +400,7 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
           >
             Refresh details
           </Button>
-          {!detail.installed && (
+          {!detail.installed && !incubatorApp && (
             <Button
               size="md"
               variant="default"
@@ -383,15 +413,38 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
               Link existing container
             </Button>
           )}
-          <Button
-            size="md"
-            color={detail.installed ? "red" : "blue"}
-            leftSection={detail.installed ? <IconTrash size={18} /> : <IconDownload size={18} />}
-            onClick={() => (detail.installed ? setUninstallModalOpen(true) : setInstallModalOpen(true))}
-            loading={activeAction === (detail.installed ? "uninstall" : "install")}
-          >
-            {detail.installed ? "Uninstall" : "Install"}
-          </Button>
+          {detail.installed ? (
+            <Button
+              size="md"
+              color="red"
+              leftSection={<IconTrash size={18} />}
+              onClick={() => setUninstallModalOpen(true)}
+              loading={activeAction === "uninstall"}
+            >
+              Uninstall
+            </Button>
+          ) : incubatorApp ? (
+            <Button
+              size="md"
+              color="grape"
+              leftSection={<IconRocket size={18} />}
+              component="a"
+              href={promotionIssueUrl}
+            >
+              Request Promotion
+            </Button>
+          ) : (
+            <Button
+              size="md"
+              color="blue"
+              leftSection={<IconDownload size={18} />}
+              onClick={() => setInstallModalOpen(true)}
+              loading={activeAction === "install"}
+              disabled={isInstallBlocked}
+            >
+              Install
+            </Button>
+          )}
         </Group>
       </Group>
 
@@ -414,9 +467,55 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
                       {detail.category}
                     </Badge>
                   )}
+                  <Badge variant="light" color={getChannelColor(detail.channel)}>
+                    {formatChannelLabel(detail.channel, detail.channel_label)}
+                  </Badge>
+                  {detail.origin_channel && (
+                    <Badge variant="outline" color="gray">
+                      From {formatChannelLabel(detail.origin_channel)}
+                    </Badge>
+                  )}
+                  {detail.risk_level && (
+                    <Badge variant="outline" color="red">
+                      {detail.risk_level}
+                    </Badge>
+                  )}
+                  {detail.support_tier && (
+                    <Badge variant="outline" color="teal">
+                      {detail.support_tier}
+                    </Badge>
+                  )}
+                  {promotionStatusLabel && (
+                    <Badge variant="outline" color="grape">
+                      {promotionStatusLabel}
+                    </Badge>
+                  )}
                 </Group>
               </Box>
             </Group>
+
+            {(incubatorApp || isInstallBlocked || promotionStatusLabel) && (
+              <Stack gap="sm" mt="md">
+                {incubatorApp && (
+                  <Alert color="grape" variant="light" icon={<IconFlask size={16} />} title="Incubator channel">
+                    This app is visible for discovery in the incubator channel. It cannot be installed or linked to existing containers until it is promoted to an installable channel. Use Request Promotion to open the GitHub issue form with the Promote App template.
+                    {detail.origin_channel ? ` It originated from ${formatChannelLabel(detail.origin_channel)}.` : ""}
+                  </Alert>
+                )}
+
+                {isInstallBlocked && (
+                  <Alert color="orange" variant="light" title="Installation unavailable">
+                    {detail.install_block_reason || "This app cannot be installed from its current channel."}
+                  </Alert>
+                )}
+
+                {promotionStatusLabel && (
+                  <Alert color="blue" variant="light" title="Promotion status">
+                    Current request state: {promotionStatusLabel}.
+                  </Alert>
+                )}
+              </Stack>
+            )}
 
             <Text size="xs" c="dimmed" mt="md" fw={700} tt="uppercase">
               Tagline
@@ -767,6 +866,12 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
 
       <Modal opened={installModalOpen} onClose={() => setInstallModalOpen(false)} title={`Install ${detail.title}`} centered>
         <Stack gap="md">
+          {isInstallBlocked && (
+            <Alert color="orange" variant="light" title="Installation blocked">
+              {detail.install_block_reason || "This app cannot be installed right now."}
+            </Alert>
+          )}
+
           <Checkbox
             checked={autoInstallPrereqs}
             onChange={(event) => setAutoInstallPrereqs(event.currentTarget.checked)}
@@ -786,7 +891,7 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
             <Button variant="default" onClick={() => setInstallModalOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleInstall} loading={activeAction === "install"}>
+            <Button onClick={handleInstall} loading={activeAction === "install"} disabled={isInstallBlocked}>
               Install
             </Button>
           </Group>
