@@ -1,5 +1,4 @@
 import { ExplorerLayout } from '@/components/FileExplorer/ExplorerLayout';
-import { Container } from '@mantine/core';
 
 export default function FileExplorerPage() {
   return (

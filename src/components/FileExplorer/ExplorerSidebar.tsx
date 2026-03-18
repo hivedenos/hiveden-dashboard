@@ -1,18 +1,15 @@
 'use client';
 
-import { Stack, NavLink, Text, Badge, Group, ScrollArea, ThemeIcon } from '@mantine/core';
+import { Stack, NavLink, Text, Group, ScrollArea } from '@mantine/core';
 import { 
   IconHome, 
-  IconFolder, 
-  IconDownload, 
-  IconPhoto, 
-  IconDeviceFloppy, 
+  IconCurrentLocation,
   IconStar 
 } from '@tabler/icons-react';
 import { useExplorer } from './ExplorerProvider';
 
 export function ExplorerSidebar() {
-  const { navigateTo, currentPath } = useExplorer();
+  const { navigateTo, currentPath, homePath, bookmarks } = useExplorer();
 
   return (
     <Stack gap={0} h="100%" w={240} style={{ borderRight: '1px solid var(--mantine-color-default-border)' }} bg="var(--mantine-color-body)">
@@ -23,43 +20,32 @@ export function ExplorerSidebar() {
           <BoxSection title="Quick Access">
             <NavItem 
               icon={<IconHome size={16} />} 
-              label="Home" 
-              path="/" 
+              label="Root" 
               active={currentPath === '/'} 
               onClick={() => navigateTo('/')}
             />
-             {/* Common folders - logic to be added to resolve real paths */}
             <NavItem 
-              icon={<IconFolder size={16} />} 
-              label="Documents" 
-              path="/Documents" 
-              active={currentPath === '/Documents'} 
-              onClick={() => navigateTo('/Documents')}
-            />
-            <NavItem 
-              icon={<IconDownload size={16} />} 
-              label="Downloads" 
-              path="/Downloads" 
-              active={currentPath === '/Downloads'} 
-              onClick={() => navigateTo('/Downloads')}
-            />
-            <NavItem 
-              icon={<IconPhoto size={16} />} 
-              label="Pictures" 
-              path="/Pictures" 
-              active={currentPath === '/Pictures'} 
-              onClick={() => navigateTo('/Pictures')}
+              icon={<IconCurrentLocation size={16} />} 
+              label="Workspace" 
+              active={currentPath === homePath} 
+              onClick={() => navigateTo(homePath)}
             />
           </BoxSection>
 
-          {/* Bookmarks - Placeholder */}
-          <BoxSection title="Bookmarks" rightSection={<Badge size="xs" circle>0</Badge>}>
-             <Text size="xs" c="dimmed" fs="italic">No bookmarks yet</Text>
-          </BoxSection>
-
-           {/* USB Devices - Placeholder */}
-           <BoxSection title="USB Devices">
-             <Text size="xs" c="dimmed" fs="italic">No devices detected</Text>
+          <BoxSection title="Bookmarks">
+            {bookmarks.length > 0 ? (
+              bookmarks.map((bookmark) => (
+                <NavItem
+                  key={bookmark.path}
+                  icon={<IconStar size={16} />}
+                  label={bookmark.name}
+                  active={currentPath === bookmark.path}
+                  onClick={() => navigateTo(bookmark.path)}
+                />
+              ))
+            ) : (
+              <Text size="xs" c="dimmed" fs="italic">Add a bookmark from the context menu</Text>
+            )}
           </BoxSection>
 
         </Stack>
@@ -82,7 +68,7 @@ function BoxSection({ title, children, rightSection }: { title: string, children
     )
 }
 
-function NavItem({ icon, label, path, active, onClick }: { icon: React.ReactNode, label: string, path: string, active: boolean, onClick: () => void }) {
+function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void }) {
     return (
         <NavLink
             label={label}

@@ -1,6 +1,6 @@
 'use client';
 
-import { Menu, Text, rem } from '@mantine/core';
+import { Menu, rem } from '@mantine/core';
 import { 
   IconFolderOpen, 
   IconScissors, 
@@ -11,7 +11,6 @@ import {
   IconDownload, 
   IconInfoCircle, 
   IconStar,
-  IconExternalLink
 } from '@tabler/icons-react';
 import { useExplorer } from './ExplorerProvider';
 import { FileEntry } from '@/lib/client';
@@ -29,8 +28,15 @@ export function FileContextMenu({ opened, x, y, onClose, targetItem }: FileConte
     selectedItems, 
     files, 
     folders,
-    navigateTo, 
-    currentPath
+    clipboardStatus,
+    openEntry,
+    copySelection,
+    cutSelection,
+    pasteIntoCurrentPath,
+    renameEntryByPath,
+    deleteSelection,
+    showPropertiesForPath,
+    addBookmarkForEntry,
   } = useExplorer();
 
   // Determine what the context is
@@ -41,21 +47,21 @@ export function FileContextMenu({ opened, x, y, onClose, targetItem }: FileConte
   // Logic to determine active selection for the menu
   let activeSelection: string[] = [];
   if (targetItem) {
-      if (selectedItems.has(targetItem.name)) {
+      if (selectedItems.has(targetItem.path)) {
           activeSelection = Array.from(selectedItems);
       } else {
-          activeSelection = [targetItem.name];
+          activeSelection = [targetItem.path];
       }
   } else {
       activeSelection = Array.from(selectedItems);
   }
 
   const isMultiSelect = activeSelection.length > 1;
-  const singleItemName = activeSelection.length === 1 ? activeSelection[0] : null;
+  const singleItemPath = activeSelection.length === 1 ? activeSelection[0] : null;
   
   // Find full entry object(s)
   const allEntries = [...folders, ...files];
-  const activeEntries = allEntries.filter(e => activeSelection.includes(e.name));
+  const activeEntries = allEntries.filter(e => activeSelection.includes(e.path));
   const singleEntry = activeEntries.length === 1 ? activeEntries[0] : null;
 
   if (!opened) return null;
@@ -70,18 +76,14 @@ export function FileContextMenu({ opened, x, y, onClose, targetItem }: FileConte
     >
       <Menu.Dropdown style={{ position: 'fixed', top: y, left: x, zIndex: 9999 }}>
         <Menu.Label>
-            {isMultiSelect ? `${activeSelection.length} items selected` : (singleItemName || 'Current Folder')}
+            {isMultiSelect ? `${activeSelection.length} items selected` : (singleEntry?.name || singleItemPath || 'Current Folder')}
         </Menu.Label>
         
         {singleEntry && (
             <Menu.Item 
                 leftSection={<IconFolderOpen style={{ width: rem(14), height: rem(14) }} />}
                 onClick={() => {
-                    if (singleEntry.type === 'directory') {
-                        navigateTo(currentPath === '/' ? `/${singleEntry.name}` : `${currentPath}/${singleEntry.name}`);
-                    } else {
-                        // Open file logic
-                    }
+                    openEntry(singleEntry);
                     onClose();
                 }}
             >
@@ -91,13 +93,32 @@ export function FileContextMenu({ opened, x, y, onClose, targetItem }: FileConte
 
         <Menu.Divider />
 
-        <Menu.Item leftSection={<IconScissors style={{ width: rem(14), height: rem(14) }} />}>
+        <Menu.Item
+          leftSection={<IconScissors style={{ width: rem(14), height: rem(14) }} />}
+          onClick={async () => {
+            await cutSelection(activeSelection);
+            onClose();
+          }}
+        >
           Cut
         </Menu.Item>
-        <Menu.Item leftSection={<IconCopy style={{ width: rem(14), height: rem(14) }} />}>
+        <Menu.Item
+          leftSection={<IconCopy style={{ width: rem(14), height: rem(14) }} />}
+          onClick={async () => {
+            await copySelection(activeSelection);
+            onClose();
+          }}
+        >
           Copy
         </Menu.Item>
-        <Menu.Item leftSection={<IconClipboard style={{ width: rem(14), height: rem(14) }} />} disabled>
+        <Menu.Item
+          leftSection={<IconClipboard style={{ width: rem(14), height: rem(14) }} />}
+          disabled={!clipboardStatus?.has_items}
+          onClick={async () => {
+            await pasteIntoCurrentPath();
+            onClose();
+          }}
+        >
           Paste
         </Menu.Item>
 
@@ -106,12 +127,23 @@ export function FileContextMenu({ opened, x, y, onClose, targetItem }: FileConte
         <Menu.Item 
             leftSection={<IconPencil style={{ width: rem(14), height: rem(14) }} />}
             disabled={isMultiSelect}
+            onClick={async () => {
+                if (!singleEntry) {
+                    return;
+                }
+                await renameEntryByPath(singleEntry);
+                onClose();
+            }}
         >
           Rename
         </Menu.Item>
         <Menu.Item 
             color="red" 
             leftSection={<IconTrash style={{ width: rem(14), height: rem(14) }} />}
+            onClick={async () => {
+                await deleteSelection(activeSelection);
+                onClose();
+            }}
         >
           Delete
         </Menu.Item>
@@ -119,17 +151,39 @@ export function FileContextMenu({ opened, x, y, onClose, targetItem }: FileConte
         <Menu.Divider />
 
         {singleEntry && singleEntry.type === 'file' && (
-             <Menu.Item leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}>
+             <Menu.Item
+                leftSection={<IconDownload style={{ width: rem(14), height: rem(14) }} />}
+                onClick={() => {
+                    openEntry(singleEntry);
+                    onClose();
+                }}
+             >
                 Download
             </Menu.Item>
         )}
 
-        <Menu.Item leftSection={<IconInfoCircle style={{ width: rem(14), height: rem(14) }} />}>
+        <Menu.Item
+          leftSection={<IconInfoCircle style={{ width: rem(14), height: rem(14) }} />}
+          disabled={!singleEntry}
+          onClick={async () => {
+            if (!singleEntry) {
+              return;
+            }
+            await showPropertiesForPath(singleEntry.path);
+            onClose();
+          }}
+        >
           Properties
         </Menu.Item>
         
         {singleEntry && singleEntry.type === 'directory' && (
-            <Menu.Item leftSection={<IconStar style={{ width: rem(14), height: rem(14) }} />}>
+            <Menu.Item
+              leftSection={<IconStar style={{ width: rem(14), height: rem(14) }} />}
+              onClick={async () => {
+                await addBookmarkForEntry(singleEntry);
+                onClose();
+              }}
+            >
                 Add to Bookmarks
             </Menu.Item>
         )}

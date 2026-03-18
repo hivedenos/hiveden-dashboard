@@ -1,12 +1,16 @@
 "use client";
 
-import { AppShell, Group, Box, ScrollArea } from "@mantine/core";
+import { Group, Box, Drawer, ScrollArea } from "@mantine/core";
+import { useDisclosure } from "@mantine/hooks";
+import { ExplorerOperationsPanel } from "./ExplorerOperationsPanel";
 import { ExplorerSidebar } from "./ExplorerSidebar";
 import { ExplorerToolbar } from "./ExplorerToolbar";
 import { FileList } from "./FileList";
 import { ExplorerProvider } from "./ExplorerProvider";
 
 export function ExplorerLayout() {
+  const [operationsOpened, { open: openOperations, close: closeOperations }] = useDisclosure(false);
+
   return (
     <ExplorerProvider>
       <Group
@@ -22,14 +26,19 @@ export function ExplorerLayout() {
         <ExplorerSidebar />
 
             <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <ExplorerToolbar />
+                <ExplorerToolbar onToggleOperations={openOperations} />
                 <ScrollArea style={{ flex: 1, minHeight: 0 }} bg="var(--mantine-color-body)" type="auto">
                     <FileList />
                 </ScrollArea>
             </Box>
 
-        {/* Operations Panel (Phase 3) - Placeholder position */}
+        <Box visibleFrom="xl" style={{ minHeight: 0 }}>
+          <ExplorerOperationsPanel />
+        </Box>
       </Group>
+      <Drawer opened={operationsOpened} onClose={closeOperations} title="Operations" position="right" size="sm" hiddenFrom="xl">
+        <ExplorerOperationsPanel compact />
+      </Drawer>
     </ExplorerProvider>
   );
 }
