@@ -7,6 +7,9 @@ import { useExplorer } from './ExplorerProvider';
 
 export function ExplorerOperationsPanel({ compact = false }: { compact?: boolean }) {
   const { operations, refreshOperations, dismissOperation, cancelOperation, retryOperation } = useExplorer();
+  const activeUploads = operations.filter(
+    (operation) => operation.operation_type.includes('upload') && (operation.status === 'pending' || operation.status === 'in_progress'),
+  );
 
   return (
     <Card
@@ -22,10 +25,17 @@ export function ExplorerOperationsPanel({ compact = false }: { compact?: boolean
     >
       <Stack gap="md" h="100%">
         <Group justify="space-between" align="center">
+          <Stack gap={0}>
           <Group gap="xs">
             <IconWaveSine size={16} />
             <Text fw={700} size="sm">Operations</Text>
           </Group>
+          {activeUploads.length > 0 ? (
+            <Text size="xs" c="dimmed">
+              Uploading {activeUploads.length} batch{activeUploads.length === 1 ? '' : 'es'}...
+            </Text>
+          ) : null}
+          </Stack>
           <ActionIcon variant="subtle" size="sm" aria-label="Refresh operations" onClick={refreshOperations}>
             <IconRefresh size={16} />
           </ActionIcon>

@@ -3,6 +3,7 @@ import { Button, Checkbox, Code, Divider, Group, Modal, Stack, Text, TextInput }
 import { notifications } from '@mantine/notifications';
 
 import '@/lib/api';
+import { getApiBaseUrl } from '@/lib/api';
 
 import {
   clearClipboard,
@@ -26,7 +27,6 @@ import {
   updateBookmark,
 } from '@/actions/explorer';
 import {
-  Body_upload_files_explorer_upload_post,
   ClipboardStatusResponse,
   ExplorerOperation,
   ExplorerService,
@@ -504,11 +504,13 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     void loadClipboard();
     void loadOperations();
 
+    const activePollers = operationPollersRef.current;
+
     return () => {
       mounted = false;
       stopSearchPolling();
-      operationPollersRef.current.forEach((poller) => clearInterval(poller));
-      operationPollersRef.current.clear();
+      activePollers.forEach((poller) => clearInterval(poller));
+      activePollers.clear();
     };
   }, [loadBookmarks, loadClipboard, loadOperations, stopSearchPolling]);
 
@@ -833,13 +835,6 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
       setOperations((previous) => upsertOperation(previous, prepareResponse.operation));
       startOperationPolling(prepareResponse.operation_id);
 
-      const payload: Body_upload_files_explorer_upload_post = {
-        destination: currentPath,
-        overwrite: uploadDialog.overwrite,
-        operation_id: prepareResponse.operation_id,
-        files: uploadDialog.files,
-      };
-
       setUploadDialog({ opened: false, files: [], overwrite: false, conflicts: [], conflictDetails: [], isCheckingConflicts: false });
       setIsUploading(false);
       notifications.show({
@@ -848,26 +843,77 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
         color: 'blue',
       });
 
-      void ExplorerService.uploadFilesExplorerUploadPost(payload)
-        .then(async (response) => {
-          setOperations((previous) => upsertOperation(previous, response.operation));
+      void (async () => {
+        try {
+          const apiBaseUrl = getApiBaseUrl();
+
+          for (const file of uploadDialog.files) {
+            const url = new URL(`${apiBaseUrl}/explorer/upload/stream/${encodeURIComponent(prepareResponse.operation_id)}`);
+            url.searchParams.set('filename', file.name);
+            url.searchParams.set('size', String(file.size));
+            url.searchParams.set('overwrite', String(uploadDialog.overwrite));
+
+            const response = await fetch(url.toString(), {
+              method: 'PUT',
+              body: file,
+              headers: {
+                'Content-Type': file.type || 'application/octet-stream',
+              },
+            });
+
+            let payload: unknown = null;
+
+            try {
+              payload = await response.json();
+            } catch {
+              payload = null;
+            }
+
+            if (!response.ok) {
+              const errorMessage =
+                payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message?: unknown }).message === 'string'
+                  ? (payload as { message: string }).message
+                  : `Failed to upload ${file.name}`;
+
+              throw new Error(errorMessage);
+            }
+
+            if (payload && typeof payload === 'object' && 'operation' in payload) {
+              const operation = (payload as { operation?: ExplorerOperation }).operation;
+              if (operation) {
+                setOperations((previous) => upsertOperation(previous, operation));
+              }
+            }
+          }
+
           await Promise.all([loadDirectory(currentPath), loadOperations()]);
+
+          const finalOperationResponse = await getOperationStatus(prepareResponse.operation_id);
+          const finalOperation = finalOperationResponse.operation;
+          setOperations((previous) => upsertOperation(previous, finalOperation));
+
+          const finalResult = parseOperationResult(finalOperation.result);
+          const summary = finalResult && typeof finalResult.summary === 'object' ? (finalResult.summary as Record<string, number>) : null;
+          const hasIssues = Boolean(summary && ((summary.failed ?? 0) > 0 || (summary.skipped ?? 0) > 0 || (summary.cancelled ?? 0) > 0));
+
           notifications.show({
-            title: response.message?.toLowerCase().includes('partial') ? 'Upload finished with issues' : 'Upload complete',
-            message: response.message || `${uploadDialog.files.length} file${uploadDialog.files.length === 1 ? '' : 's'} uploaded`,
-            color: response.message?.toLowerCase().includes('partial') ? 'yellow' : 'green',
+            title: hasIssues ? 'Upload finished with issues' : 'Upload complete',
+            message: hasIssues
+              ? 'Some files were skipped, cancelled, or failed. Review the Operations panel for details.'
+              : `${uploadDialog.files.length} file${uploadDialog.files.length === 1 ? '' : 's'} uploaded successfully.`,
+            color: hasIssues ? 'yellow' : 'green',
           });
-        })
-        .catch((err) => {
+        } catch (err) {
           notifications.show({
             title: 'Upload failed',
             message: err instanceof Error ? err.message : 'Failed to upload files',
             color: 'red',
           });
-        })
-        .finally(() => {
+          await loadOperations();
+        } finally {
           stopOperationPolling(prepareResponse.operation_id);
-        });
+        }
+      })();
     } catch (err) {
       notifications.show({
         title: 'Upload failed',
@@ -1311,7 +1357,10 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
           <Checkbox
             label="Overwrite files with the same name"
             checked={uploadDialog.overwrite}
-            onChange={(event) => setUploadDialog((previous) => ({ ...previous, overwrite: event.currentTarget.checked }))}
+            onChange={(event) => {
+              const checked = event.currentTarget.checked;
+              setUploadDialog((previous) => ({ ...previous, overwrite: checked }));
+            }}
             disabled={isUploading || uploadDialog.isCheckingConflicts}
           />
           <Group justify="flex-end">
