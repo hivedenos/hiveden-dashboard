@@ -3,6 +3,7 @@
 import { Menu, rem } from '@mantine/core';
 import { 
   IconFolderOpen, 
+  IconFolderPlus,
   IconScissors, 
   IconCopy, 
   IconClipboard, 
@@ -33,6 +34,7 @@ export function FileContextMenu({ opened, x, y, onClose, targetItem }: FileConte
     copySelection,
     cutSelection,
     pasteIntoCurrentPath,
+    createFolder,
     renameEntryByPath,
     deleteSelection,
     showPropertiesForPath,
@@ -123,6 +125,20 @@ export function FileContextMenu({ opened, x, y, onClose, targetItem }: FileConte
         </Menu.Item>
 
         <Menu.Divider />
+
+        {!singleEntry && (
+          <Menu.Item
+            leftSection={<IconFolderPlus style={{ width: rem(14), height: rem(14) }} />}
+            onClick={() => {
+              createFolder();
+              onClose();
+            }}
+          >
+            New Folder
+          </Menu.Item>
+        )}
+
+        {!singleEntry && <Menu.Divider />}
 
         <Menu.Item 
             leftSection={<IconPencil style={{ width: rem(14), height: rem(14) }} />}

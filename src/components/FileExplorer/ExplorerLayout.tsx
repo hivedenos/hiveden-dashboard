@@ -10,6 +10,7 @@ import { ExplorerProvider } from "./ExplorerProvider";
 
 export function ExplorerLayout() {
   const [operationsOpened, { open: openOperations, close: closeOperations }] = useDisclosure(false);
+  const [sidebarOpened, { open: openSidebar, close: closeSidebar }] = useDisclosure(false);
 
   return (
     <ExplorerProvider>
@@ -23,10 +24,12 @@ export function ExplorerLayout() {
       >
         {/* Assuming Header is 60px, adjust calculation based on layout */}
 
-        <ExplorerSidebar />
+        <Box visibleFrom="md" style={{ minHeight: 0 }}>
+          <ExplorerSidebar />
+        </Box>
 
-            <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                <ExplorerToolbar onToggleOperations={openOperations} />
+            <Box style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, minWidth: 0 }}>
+                <ExplorerToolbar onToggleOperations={openOperations} onToggleSidebar={openSidebar} />
                 <ScrollArea style={{ flex: 1, minHeight: 0 }} bg="var(--mantine-color-body)" type="auto">
                     <FileList />
                 </ScrollArea>
@@ -38,6 +41,9 @@ export function ExplorerLayout() {
       </Group>
       <Drawer opened={operationsOpened} onClose={closeOperations} title="Operations" position="right" size="sm" hiddenFrom="xl">
         <ExplorerOperationsPanel compact />
+      </Drawer>
+      <Drawer opened={sidebarOpened} onClose={closeSidebar} title="Locations" position="left" size="xs" hiddenFrom="md">
+        <ExplorerSidebar compact onNavigate={closeSidebar} />
       </Drawer>
     </ExplorerProvider>
   );

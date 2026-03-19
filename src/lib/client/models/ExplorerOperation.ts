@@ -9,10 +9,10 @@ export type ExplorerOperation = {
     progress?: number;
     total_items?: (number | null);
     processed_items?: number;
-    source_paths?: (string | null);
+    source_paths?: (Array<string> | string | null);
     destination_path?: (string | null);
     error_message?: (string | null);
-    result?: (string | null);
+    result?: (string | Record<string, any> | null);
     created_at?: (string | null);
     updated_at?: (string | null);
     completed_at?: (string | null);

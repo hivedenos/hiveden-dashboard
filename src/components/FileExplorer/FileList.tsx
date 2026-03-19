@@ -1,8 +1,9 @@
 'use client';
 
-import { Box, Card, Checkbox, Group, Loader, SimpleGrid, Stack, Table, Text, TextInput, ThemeIcon } from '@mantine/core';
+import { ActionIcon, Box, Card, Checkbox, Group, Loader, SimpleGrid, Stack, Table, Text, TextInput, ThemeIcon } from '@mantine/core';
 import {
   IconArrowUp,
+  IconDotsVertical,
   IconFile,
   IconFileCode,
   IconFileText,
@@ -10,6 +11,8 @@ import {
   IconFolder,
   IconMusic,
   IconPhoto,
+  IconFolderPlus,
+  IconUpload,
   IconVideo,
 } from '@tabler/icons-react';
 import { useMemo, useRef, useState } from 'react';
@@ -33,6 +36,9 @@ export function FileList() {
     viewMode,
     error,
     submitRenameEntry,
+    createFolder,
+    uploadFiles,
+    isUploading,
   } = useExplorer();
 
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item?: FileEntry; opened: boolean }>({
@@ -42,20 +48,26 @@ export function FileList() {
   });
 
   const items = useMemo(() => [...folders, ...files], [files, folders]);
+  const pathIndexMap = useMemo(() => new Map(items.map((item, index) => [item.path, index])), [items]);
   const allSelected = items.length > 0 && selectedItems.size === items.length;
   const indeterminate = selectedItems.size > 0 && selectedItems.size < items.length;
   const [anchorPath, setAnchorPath] = useState<string | null>(null);
+  const [activePath, setActivePath] = useState<string | null>(null);
   const [renamingPath, setRenamingPath] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
+  const [isDragActive, setIsDragActive] = useState(false);
   const itemRefs = useRef(new Map<string, HTMLElement>());
 
+  const currentActivePath = activePath && pathIndexMap.has(activePath) ? activePath : items[0]?.path ?? null;
+
   const focusItem = (path: string) => {
+    setActivePath(path);
     itemRefs.current.get(path)?.focus();
   };
 
   const selectRange = (fromPath: string, toPath: string, keepExisting = false) => {
-    const startIndex = items.findIndex((item) => item.path === fromPath);
-    const endIndex = items.findIndex((item) => item.path === toPath);
+    const startIndex = pathIndexMap.get(fromPath) ?? -1;
+    const endIndex = pathIndexMap.get(toPath) ?? -1;
 
     if (startIndex < 0 || endIndex < 0) {
       return;
@@ -70,6 +82,7 @@ export function FileList() {
 
   const handleRowClick = (path: string, event: React.MouseEvent | React.KeyboardEvent) => {
     if (event.shiftKey && anchorPath) {
+      setActivePath(path);
       selectRange(anchorPath, path, event.metaKey || event.ctrlKey);
       return;
     }
@@ -79,11 +92,26 @@ export function FileList() {
     if (multi) {
       toggleSelection(path, true);
       setAnchorPath(path);
+      setActivePath(path);
       return;
     }
 
     setSelection([path]);
     setAnchorPath(path);
+    setActivePath(path);
+  };
+
+  const openContextMenuForItem = (item: FileEntry) => {
+    const node = itemRefs.current.get(item.path);
+    const rect = node?.getBoundingClientRect();
+
+    setActivePath(item.path);
+    setContextMenu({
+      x: rect ? rect.left + 24 : window.innerWidth / 2,
+      y: rect ? rect.top + 24 : window.innerHeight / 2,
+      item,
+      opened: true,
+    });
   };
 
   const handleItemKeyDown = (item: FileEntry, index: number, event: React.KeyboardEvent) => {
@@ -91,6 +119,12 @@ export function FileList() {
       event.preventDefault();
       setRenamingPath(item.path);
       setRenameValue(item.name);
+      return;
+    }
+
+    if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+      event.preventDefault();
+      openContextMenuForItem(item);
       return;
     }
 
@@ -119,7 +153,7 @@ export function FileList() {
         return;
       }
 
-      const nextItem = items[nextIndex];
+        const nextItem = items[nextIndex];
       focusItem(nextItem.path);
 
       if (event.shiftKey) {
@@ -188,6 +222,38 @@ export function FileList() {
     setRenameValue('');
   };
 
+  const renderActions = (item: FileEntry) => (
+    <ActionIcon
+      variant="subtle"
+      color="gray"
+      aria-label={`Open actions for ${item.name}`}
+      onClick={(event) => {
+        event.stopPropagation();
+        openContextMenuForItem(item);
+      }}
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <IconDotsVertical size={16} />
+    </ActionIcon>
+  );
+
+  const handleDragState = (event: React.DragEvent, active: boolean) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragActive(active);
+  };
+
+  const handleDrop = async (event: React.DragEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setIsDragActive(false);
+
+    const droppedFiles = Array.from(event.dataTransfer.files ?? []);
+    if (droppedFiles.length > 0) {
+      await uploadFiles(droppedFiles);
+    }
+  };
+
   if (isLoading) {
     return (
       <Stack align="center" justify="center" p="xl" gap="sm">
@@ -208,11 +274,33 @@ export function FileList() {
 
   if (items.length === 0) {
     return (
-      <Box onContextMenu={(event) => handleContextMenu(event)} p="xl">
+      <Box data-testid="explorer-dropzone" onContextMenu={(event) => handleContextMenu(event)} p="xl" onDragEnter={(event) => handleDragState(event, true)} onDragOver={(event) => handleDragState(event, true)} onDragLeave={(event) => handleDragState(event, false)} onDrop={(event) => void handleDrop(event)}>
         <Stack align="center" justify="center" gap="xs" c="dimmed">
           <IconFolder size={48} />
           <Text fw={600}>This folder is empty</Text>
           <Text size="sm">Create a directory or paste files here.</Text>
+          <Card
+            withBorder
+            padding="sm"
+            radius="md"
+            role="button"
+            tabIndex={0}
+            onClick={() => createFolder()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                createFolder();
+              }
+            }}
+            style={{ cursor: 'pointer' }}
+          >
+            <Group gap="xs" wrap="nowrap">
+              <IconFolderPlus size={18} />
+              <Text size="sm" fw={600}>Create folder</Text>
+            </Group>
+          </Card>
+          <Text size="xs">or drag files here to upload</Text>
+          {isUploading ? <Text size="xs">Uploading files...</Text> : null}
         </Stack>
         <FileContextMenu
           opened={contextMenu.opened}
@@ -227,6 +315,14 @@ export function FileList() {
 
   return (
     <>
+      <Box
+        data-testid="explorer-dropzone"
+        pos="relative"
+        onDragEnter={(event) => handleDragState(event, true)}
+        onDragOver={(event) => handleDragState(event, true)}
+        onDragLeave={(event) => handleDragState(event, false)}
+        onDrop={(event) => void handleDrop(event)}
+      >
       {viewMode === 'grid' ? (
         <SimpleGrid cols={{ base: 1, xs: 2, md: 3, xl: 4 }} spacing="md" p="md" onContextMenu={(event) => handleContextMenu(event)}>
           {items.map((item) => {
@@ -246,11 +342,13 @@ export function FileList() {
                 padding="md"
                 radius="md"
                 role="button"
-                tabIndex={0}
+                tabIndex={currentActivePath === item.path ? 0 : -1}
+                aria-label={`File item ${item.name}`}
                 aria-pressed={isSelected}
                 onClick={(event) => handleRowClick(item.path, event)}
                 onDoubleClick={() => openEntry(item)}
-                onKeyDown={(event) => handleItemKeyDown(item, items.findIndex((candidate) => candidate.path === item.path), event)}
+                onFocus={() => setActivePath(item.path)}
+                onKeyDown={(event) => handleItemKeyDown(item, pathIndexMap.get(item.path) ?? 0, event)}
                 onContextMenu={(event) => handleContextMenu(event, item)}
                 style={{
                   cursor: 'default',
@@ -263,15 +361,19 @@ export function FileList() {
                 <Stack gap="md">
                   <Group justify="space-between" align="flex-start" wrap="nowrap">
                     <FileIcon type={item.type} name={item.name} isSymlink={item.is_symlink} />
-                    <Checkbox
-                      aria-label={`Select ${item.name}`}
-                      checked={isSelected}
-                      onChange={() => {
-                        toggleSelection(item.path, true);
-                        setAnchorPath(item.path);
-                      }}
-                      onClick={(event) => event.stopPropagation()}
-                    />
+                    <Group gap={4} wrap="nowrap">
+                      <Checkbox
+                        aria-label={`Select ${item.name}`}
+                        checked={isSelected}
+                        onChange={() => {
+                          toggleSelection(item.path, true);
+                          setAnchorPath(item.path);
+                          setActivePath(item.path);
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                      />
+                      {renderActions(item)}
+                    </Group>
                   </Group>
                   <Stack gap={4}>
                     {renamingPath === item.path ? (
@@ -282,7 +384,7 @@ export function FileList() {
                         onChange={(event) => setRenameValue(event.currentTarget.value)}
                         onClick={(event) => event.stopPropagation()}
                         onDoubleClick={(event) => event.stopPropagation()}
-                        onBlur={() => void submitInlineRename(item)}
+                        onBlur={cancelInlineRename}
                         onKeyDown={(event) => {
                           event.stopPropagation();
                           if (event.key === 'Enter') {
@@ -308,7 +410,91 @@ export function FileList() {
           })}
         </SimpleGrid>
       ) : (
-        <Table highlightOnHover verticalSpacing="xs" onContextMenu={(event) => handleContextMenu(event)}>
+        <>
+        <Stack hiddenFrom="md" gap="xs" p="md" onContextMenu={(event) => handleContextMenu(event)}>
+          {items.map((item) => {
+            const isSelected = selectedItems.has(item.path);
+
+            return (
+              <Card
+                key={item.path}
+                ref={(node) => {
+                  if (node) {
+                    itemRefs.current.set(item.path, node);
+                  } else {
+                    itemRefs.current.delete(item.path);
+                  }
+                }}
+                withBorder
+                radius="md"
+                p="sm"
+                role="button"
+                tabIndex={currentActivePath === item.path ? 0 : -1}
+                aria-label={`File item ${item.name}`}
+                aria-pressed={isSelected}
+                onFocus={() => setActivePath(item.path)}
+                onClick={(event) => handleRowClick(item.path, event)}
+                onDoubleClick={() => openEntry(item)}
+                onKeyDown={(event) => handleItemKeyDown(item, pathIndexMap.get(item.path) ?? 0, event)}
+                onContextMenu={(event) => handleContextMenu(event, item)}
+                style={{
+                  background: isSelected ? 'color-mix(in srgb, var(--mantine-color-blue-light) 78%, var(--mantine-color-body))' : 'var(--mantine-color-body)',
+                }}
+              >
+                <Group align="flex-start" justify="space-between" wrap="nowrap">
+                  <Group wrap="nowrap" align="flex-start" style={{ minWidth: 0, flex: 1 }}>
+                    <Checkbox
+                      mt={2}
+                      aria-label={`Select ${item.name}`}
+                      checked={isSelected}
+                      onChange={() => {
+                        toggleSelection(item.path, true);
+                        setAnchorPath(item.path);
+                        setActivePath(item.path);
+                      }}
+                      onClick={(event) => event.stopPropagation()}
+                    />
+                    <FileIcon type={item.type} name={item.name} isSymlink={item.is_symlink} />
+                    <Stack gap={2} style={{ minWidth: 0, flex: 1 }}>
+                      {renamingPath === item.path ? (
+                        <TextInput
+                          value={renameValue}
+                          size="xs"
+                          autoFocus
+                          onChange={(event) => setRenameValue(event.currentTarget.value)}
+                          onClick={(event) => event.stopPropagation()}
+                          onDoubleClick={(event) => event.stopPropagation()}
+                          onBlur={cancelInlineRename}
+                          onKeyDown={(event) => {
+                            event.stopPropagation();
+                            if (event.key === 'Enter') {
+                              event.preventDefault();
+                              void submitInlineRename(item);
+                            }
+                            if (event.key === 'Escape') {
+                              event.preventDefault();
+                              cancelInlineRename();
+                            }
+                          }}
+                        />
+                      ) : (
+                        <Text fw={600} truncate>{item.name}</Text>
+                      )}
+                      <Text size="xs" c="dimmed">{item.type === 'directory' ? 'Folder' : `${getExtension(item.name).toUpperCase()} file`}</Text>
+                      <Group gap="xs" wrap="wrap">
+                        <Text size="xs" c="dimmed">{item.type === 'directory' ? '--' : formatSize(item.size)}</Text>
+                        <Text size="xs" c="dimmed">{formatDate(item.modified)}</Text>
+                      </Group>
+                    </Stack>
+                  </Group>
+                  {renderActions(item)}
+                </Group>
+              </Card>
+            );
+          })}
+        </Stack>
+
+        <Table visibleFrom="md" highlightOnHover verticalSpacing="xs" onContextMenu={(event) => handleContextMenu(event)}>
           <Table.Thead>
             <Table.Tr>
               <Table.Th w={40}>
@@ -323,6 +509,7 @@ export function FileList() {
               <Table.Th ta="right">Size</Table.Th>
               <Table.Th>Type</Table.Th>
               <Table.Th ta="right">Modified</Table.Th>
+              <Table.Th w={44} />
             </Table.Tr>
           </Table.Thead>
           <Table.Tbody>
@@ -342,10 +529,12 @@ export function FileList() {
                   }}
                   bg={isSelected ? 'var(--mantine-color-blue-light)' : undefined}
                   role="button"
-                  tabIndex={0}
+                  tabIndex={currentActivePath === item.path ? 0 : -1}
+                  aria-label={`File item ${item.name}`}
                   aria-pressed={isSelected}
                   onClick={(event) => handleRowClick(item.path, event)}
                   onDoubleClick={() => openEntry(item)}
+                  onFocus={() => setActivePath(item.path)}
                   onKeyDown={(event) => handleItemKeyDown(item, itemIndex, event)}
                   onContextMenu={(event) => handleContextMenu(event, item)}
                   style={{ cursor: 'default', userSelect: 'none', outlineOffset: -2 }}
@@ -353,13 +542,14 @@ export function FileList() {
                   <Table.Td w={40}>
                     <Checkbox
                       aria-label={`Select ${item.name}`}
-                      checked={isSelected}
-                      onChange={() => {
-                        toggleSelection(item.path, true);
-                        setAnchorPath(item.path);
-                      }}
-                      onClick={(event) => event.stopPropagation()}
-                    />
+                        checked={isSelected}
+                        onChange={() => {
+                          toggleSelection(item.path, true);
+                          setAnchorPath(item.path);
+                          setActivePath(item.path);
+                        }}
+                        onClick={(event) => event.stopPropagation()}
+                      />
                   </Table.Td>
                   <Table.Td>
                     <Group gap="xs" wrap="nowrap">
@@ -372,7 +562,7 @@ export function FileList() {
                           onChange={(event) => setRenameValue(event.currentTarget.value)}
                           onClick={(event) => event.stopPropagation()}
                           onDoubleClick={(event) => event.stopPropagation()}
-                          onBlur={() => void submitInlineRename(item)}
+                          onBlur={cancelInlineRename}
                           onKeyDown={(event) => {
                             event.stopPropagation();
                             if (event.key === 'Enter') {
@@ -399,12 +589,42 @@ export function FileList() {
                   <Table.Td ta="right">
                     <Text size="sm" c="dimmed">{formatDate(item.modified)}</Text>
                   </Table.Td>
+                  <Table.Td w={44}>
+                    {renderActions(item)}
+                  </Table.Td>
                 </Table.Tr>
               );
             })}
           </Table.Tbody>
         </Table>
+        </>
       )}
+
+      {isDragActive ? (
+        <Card
+          withBorder
+          radius="md"
+          p="xl"
+          style={{
+            position: 'absolute',
+            inset: 16,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+            background: 'color-mix(in srgb, var(--mantine-color-blue-light) 45%, var(--mantine-color-body))',
+            borderStyle: 'dashed',
+            zIndex: 20,
+          }}
+        >
+          <Group gap="sm" wrap="nowrap">
+            <IconUpload size={20} />
+            <Text fw={600}>{isUploading ? 'Uploading...' : 'Drop files to upload to this folder'}</Text>
+          </Group>
+        </Card>
+      ) : null}
+
+      </Box>
 
       <FileContextMenu
         opened={contextMenu.opened}

@@ -32,6 +32,7 @@ export type { BackupRestoreRequest } from './models/BackupRestoreRequest';
 export type { BackupSchedule } from './models/BackupSchedule';
 export type { BaseResponse } from './models/BaseResponse';
 export type { Body_upload_container_file_docker_containers__container_name__files_post } from './models/Body_upload_container_file_docker_containers__container_name__files_post';
+export type { Body_upload_files_explorer_upload_post } from './models/Body_upload_files_explorer_upload_post';
 export type { BtrfsShare } from './models/BtrfsShare';
 export type { BtrfsShareListResponse } from './models/BtrfsShareListResponse';
 export type { BtrfsSubvolume } from './models/BtrfsSubvolume';
@@ -144,6 +145,10 @@ export type { SystemdServiceListResponse } from './models/SystemdServiceListResp
 export type { SystemdServiceResponse } from './models/SystemdServiceResponse';
 export type { SystemdServiceStatus } from './models/SystemdServiceStatus';
 export type { UpdateLocationRequest } from './models/UpdateLocationRequest';
+export type { UploadFileDescriptor } from './models/UploadFileDescriptor';
+export type { UploadPrepareRequest } from './models/UploadPrepareRequest';
+export type { UploadPrepareResponse } from './models/UploadPrepareResponse';
+export type { UploadResponse } from './models/UploadResponse';
 export type { ValidationError } from './models/ValidationError';
 export type { VersionInfo } from './models/VersionInfo';
 export type { VolumeListResponse } from './models/VolumeListResponse';

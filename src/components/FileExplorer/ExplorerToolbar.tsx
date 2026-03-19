@@ -1,25 +1,29 @@
 'use client';
 
-import { ActionIcon, Anchor, Box, Breadcrumbs, Checkbox, CloseButton, Group, Menu, SegmentedControl, Stack, TextInput } from '@mantine/core';
+import { ActionIcon, Anchor, Box, Breadcrumbs, Checkbox, CloseButton, Collapse, Group, Menu, SegmentedControl, Stack, TextInput } from '@mantine/core';
 import { useDebouncedCallback } from '@mantine/hooks';
 import {
   IconActivity,
   IconArrowLeft,
   IconArrowRight,
   IconArrowUp,
+  IconAdjustmentsHorizontal,
+  IconFolderPlus,
   IconHome,
+  IconMenu2,
   IconLayoutGrid,
   IconList,
+  IconUpload,
   IconSearch,
   IconSettings,
 } from '@tabler/icons-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { SortBy, SortOrder } from '@/lib/client';
 
 import { useExplorer } from './ExplorerProvider';
 
-export function ExplorerToolbar({ onToggleOperations }: { onToggleOperations: () => void }) {
+export function ExplorerToolbar({ onToggleOperations, onToggleSidebar }: { onToggleOperations: () => void; onToggleSidebar: () => void }) {
   const {
     currentPath,
     navigateBack,
@@ -38,11 +42,18 @@ export function ExplorerToolbar({ onToggleOperations }: { onToggleOperations: ()
     performSearch,
     clearSearch,
     isSearching,
+    createFolder,
+    uploadFiles,
+    isUploading,
+    searchOptions,
+    setSearchOptions,
   } = useExplorer();
 
   const [pathInputMode, setPathInputMode] = useState(false);
   const [pathValue, setPathValue] = useState(currentPath);
   const [searchValue, setSearchValue] = useState('');
+  const [searchDetailsOpen, setSearchDetailsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setPathValue(currentPath);
@@ -72,7 +83,7 @@ export function ExplorerToolbar({ onToggleOperations }: { onToggleOperations: ()
 
   const handleSearch = useDebouncedCallback((query: string) => {
     if (query) {
-      performSearch(query);
+      performSearch(query, searchOptions);
     } else {
       clearSearch();
     }
@@ -82,6 +93,23 @@ export function ExplorerToolbar({ onToggleOperations }: { onToggleOperations: ()
     const value = event.target.value;
     setSearchValue(value);
     handleSearch(value);
+  };
+
+  const updateSearchOption = (nextOptions: typeof searchOptions) => {
+    setSearchOptions(nextOptions);
+
+    if (searchValue.trim()) {
+      performSearch(searchValue, nextOptions);
+    }
+  };
+
+  const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files ?? []);
+    if (selectedFiles.length > 0) {
+      await uploadFiles(selectedFiles);
+    }
+
+    event.target.value = '';
   };
 
   return (
@@ -120,6 +148,19 @@ export function ExplorerToolbar({ onToggleOperations }: { onToggleOperations: ()
             <IconActivity size={18} />
           </ActionIcon>
 
+          <ActionIcon variant="default" aria-label="Create folder" onClick={createFolder}>
+            <IconFolderPlus size={18} />
+          </ActionIcon>
+
+          <ActionIcon
+            variant="default"
+            aria-label="Upload files"
+            onClick={() => fileInputRef.current?.click()}
+            loading={isUploading}
+          >
+            <IconUpload size={18} />
+          </ActionIcon>
+
           <Menu shadow="md" width={220} position="bottom-end">
             <Menu.Target>
               <ActionIcon variant="default" aria-label="Explorer settings">
@@ -151,7 +192,13 @@ export function ExplorerToolbar({ onToggleOperations }: { onToggleOperations: ()
         </Group>
       </Group>
 
+      <input ref={fileInputRef} type="file" multiple hidden onChange={(event) => void handleFileSelection(event)} />
+
       <Group align="stretch" wrap="wrap" gap="sm">
+        <ActionIcon variant="default" aria-label="Open locations" hiddenFrom="md" onClick={onToggleSidebar}>
+          <IconMenu2 size={18} />
+        </ActionIcon>
+
         <Box style={{ flex: '2 1 22rem', minWidth: 0, cursor: 'text' }} onClick={() => !pathInputMode && setPathInputMode(true)}>
           {pathInputMode ? (
             <form onSubmit={handlePathSubmit}>
@@ -207,7 +254,41 @@ export function ExplorerToolbar({ onToggleOperations }: { onToggleOperations: ()
             ) : null
           }
         />
+
+        <ActionIcon
+          variant={searchDetailsOpen ? 'filled' : 'default'}
+          aria-label="Search options"
+          onClick={() => setSearchDetailsOpen((opened) => !opened)}
+        >
+          <IconAdjustmentsHorizontal size={18} />
+        </ActionIcon>
       </Group>
+
+      <Collapse in={searchDetailsOpen}>
+        <Group align="flex-end" wrap="wrap" gap="md">
+          <Checkbox
+            label="Regex"
+            checked={Boolean(searchOptions.use_regex)}
+            onChange={(event) => updateSearchOption({ ...searchOptions, use_regex: event.currentTarget.checked })}
+          />
+          <Checkbox
+            label="Case sensitive"
+            checked={Boolean(searchOptions.case_sensitive)}
+            onChange={(event) => updateSearchOption({ ...searchOptions, case_sensitive: event.currentTarget.checked })}
+          />
+          <SegmentedControl
+            size="xs"
+            value={searchOptions.type_filter ?? 'all'}
+            onChange={(value) => updateSearchOption({ ...searchOptions, type_filter: value })}
+            data={[
+              { label: 'All', value: 'all' },
+              { label: 'Files', value: 'file' },
+              { label: 'Folders', value: 'directory' },
+            ]}
+            aria-label="Search type filter"
+          />
+        </Group>
+      </Collapse>
     </Stack>
   );
 }

@@ -1,11 +1,15 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Button, Code, Divider, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
+import { Button, Checkbox, Code, Divider, Group, Modal, Stack, Text, TextInput } from '@mantine/core';
 import { notifications } from '@mantine/notifications';
+
+import '@/lib/api';
 
 import {
   clearClipboard,
   copyItems,
+  createDirectory,
   createBookmark,
+  deleteBookmark,
   cutItems,
   deleteItems,
   deleteOperation,
@@ -19,8 +23,19 @@ import {
   pasteItems,
   renameItem,
   searchFiles,
+  updateBookmark,
 } from '@/actions/explorer';
-import { ClipboardStatusResponse, ExplorerOperation, FileEntry, SortBy, SortOrder } from '@/lib/client';
+import {
+  Body_upload_files_explorer_upload_post,
+  ClipboardStatusResponse,
+  ExplorerOperation,
+  ExplorerService,
+  FileEntry,
+  OperationResponse,
+  SearchRequest,
+  SortBy,
+  SortOrder,
+} from '@/lib/client';
 
 type ViewMode = 'list' | 'grid';
 
@@ -39,14 +54,23 @@ type RenameDialogState = {
 
 type BookmarkDialogState = {
   opened: boolean;
-  entry: FileEntry | null;
+  entry: FileEntry | BookmarkItem | null;
   value: string;
   isSubmitting: boolean;
+  mode: 'create' | 'edit';
 };
+
+type SearchOptions = Pick<SearchRequest, 'use_regex' | 'case_sensitive' | 'type_filter'>;
 
 type DeleteDialogState = {
   opened: boolean;
   paths: string[];
+  isSubmitting: boolean;
+};
+
+type CreateFolderDialogState = {
+  opened: boolean;
+  value: string;
   isSubmitting: boolean;
 };
 
@@ -55,6 +79,15 @@ type PropertiesDialogState = {
   path: string | null;
   entry: FileEntry | null;
   isLoading: boolean;
+};
+
+type UploadDialogState = {
+  opened: boolean;
+  files: File[];
+  overwrite: boolean;
+  conflicts: string[];
+  conflictDetails: Array<{ path: string; reason?: string; existing_type?: string }>;
+  isCheckingConflicts: boolean;
 };
 
 interface ExplorerState {
@@ -72,10 +105,12 @@ interface ExplorerState {
   sortOrder: SortOrder;
   isSearching: boolean;
   searchQuery: string;
+  isUploading: boolean;
   homePath: string;
   bookmarks: BookmarkItem[];
   clipboardStatus: ClipboardStatusResponse | null;
   operations: ExplorerOperation[];
+  searchOptions: SearchOptions;
 }
 
 interface ExplorerContextType extends ExplorerState {
@@ -84,6 +119,7 @@ interface ExplorerContextType extends ExplorerState {
   navigateForward: () => void;
   navigateUp: () => void;
   refresh: () => void;
+  refreshOperations: () => void;
   toggleSelection: (path: string, multi?: boolean) => void;
   clearSelection: () => void;
   setSelection: (paths: string[]) => void;
@@ -91,8 +127,11 @@ interface ExplorerContextType extends ExplorerState {
   setViewMode: (mode: ViewMode) => void;
   toggleHidden: () => void;
   setSort: (by: SortBy, order: SortOrder) => void;
-  performSearch: (query: string) => void;
+  performSearch: (query: string, optionsOverride?: SearchOptions) => void;
   clearSearch: () => void;
+  setSearchOptions: (options: SearchOptions) => void;
+  createFolder: () => void;
+  uploadFiles: (files: File[]) => Promise<void>;
   openEntry: (entry: FileEntry) => void;
   copySelection: (paths?: string[]) => Promise<void>;
   cutSelection: (paths?: string[]) => Promise<void>;
@@ -102,7 +141,11 @@ interface ExplorerContextType extends ExplorerState {
   deleteSelection: (paths?: string[]) => Promise<void>;
   showPropertiesForPath: (path: string) => Promise<void>;
   addBookmarkForEntry: (entry: FileEntry) => Promise<void>;
+  editBookmark: (bookmark: BookmarkItem) => void;
+  removeBookmark: (bookmark: BookmarkItem) => Promise<void>;
   clearClipboardContents: () => Promise<void>;
+  cancelOperation: (operationId: string) => Promise<void>;
+  retryOperation: (operationId: string) => Promise<void>;
   dismissOperation: (operationId: string) => Promise<void>;
 }
 
@@ -159,6 +202,107 @@ function getParentPath(path: string) {
   return path.split('/').slice(0, -1).join('/') || '/';
 }
 
+function parseOperationResult(result: ExplorerOperation['result']) {
+  if (!result) {
+    return null;
+  }
+
+  if (typeof result === 'string') {
+    try {
+      return JSON.parse(result) as Record<string, unknown>;
+    } catch {
+      return null;
+    }
+  }
+
+  return result as Record<string, unknown>;
+}
+
+function extractConflictPaths(input: unknown): string[] {
+  if (!input || typeof input !== 'object') {
+    return [];
+  }
+
+  const record = input as Record<string, unknown>;
+  const candidates = [record.conflicts, record.files, record.items, record.entries].find(Array.isArray);
+
+  if (!Array.isArray(candidates)) {
+    return [];
+  }
+
+  return candidates
+    .map((item) => {
+      if (typeof item === 'string') {
+        return item;
+      }
+
+      if (!item || typeof item !== 'object') {
+        return null;
+      }
+
+      const value = item as Record<string, unknown>;
+      return (value.path as string) || (value.name as string) || (value.relative_path as string) || null;
+    })
+    .filter((item): item is string => Boolean(item));
+}
+
+function extractConflictDetails(input: unknown): Array<{ path: string; reason?: string; existing_type?: string }> {
+  if (!input || typeof input !== 'object') {
+    return [];
+  }
+
+  const record = input as Record<string, unknown>;
+  const candidates = [record.conflicts, record.files, record.items, record.entries].find(Array.isArray);
+
+  if (!Array.isArray(candidates)) {
+    return [];
+  }
+
+  return candidates
+    .map((item) => {
+      if (!item || typeof item !== 'object') {
+        if (typeof item === 'string') {
+          return { path: item };
+        }
+        return null;
+      }
+
+      const value = item as Record<string, unknown>;
+      const path = (value.path as string) || (value.name as string) || (value.relative_path as string);
+      if (!path) {
+        return null;
+      }
+
+      return {
+        path,
+        reason: typeof value.reason === 'string' ? value.reason : undefined,
+        existing_type: typeof value.existing_type === 'string' ? value.existing_type : undefined,
+      };
+    })
+    .filter((item): item is { path: string; reason?: string; existing_type?: string } => Boolean(item));
+}
+
+function upsertOperation(operations: ExplorerOperation[], nextOperation: ExplorerOperation) {
+  const existingIndex = operations.findIndex((operation) => operation.id === nextOperation.id);
+  if (existingIndex === -1) {
+    return [nextOperation, ...operations].slice(0, 8);
+  }
+
+  const updated = [...operations];
+  updated[existingIndex] = nextOperation;
+  return updated;
+}
+
+function extractFileEntriesFromOperation(operation: ExplorerOperation): FileEntry[] {
+  const parsedResult = parseOperationResult(operation.result);
+  if (!parsedResult) {
+    return [];
+  }
+
+  const matches = parsedResult.matches ?? parsedResult.files ?? parsedResult.entries ?? parsedResult.result;
+  return Array.isArray(matches) ? (matches as FileEntry[]) : [];
+}
+
 export const useExplorer = () => {
   const context = useContext(ExplorerContext);
 
@@ -185,6 +329,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
   const [sortOrder, setSortOrder] = useState<SortOrder>(SortOrder.ASC);
   const [isSearching, setIsSearching] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isUploading, setIsUploading] = useState(false);
   const [preSearchFiles, setPreSearchFiles] = useState<FileEntry[]>([]);
   const [preSearchFolders, setPreSearchFolders] = useState<FileEntry[]>([]);
   const [bookmarks, setBookmarks] = useState<BookmarkItem[]>([]);
@@ -202,10 +347,16 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     entry: null,
     value: '',
     isSubmitting: false,
+    mode: 'create',
   });
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState>({
     opened: false,
     paths: [],
+    isSubmitting: false,
+  });
+  const [createFolderDialog, setCreateFolderDialog] = useState<CreateFolderDialogState>({
+    opened: false,
+    value: '',
     isSubmitting: false,
   });
   const [propertiesDialog, setPropertiesDialog] = useState<PropertiesDialogState>({
@@ -214,9 +365,26 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     entry: null,
     isLoading: false,
   });
+  const [uploadDialog, setUploadDialog] = useState<UploadDialogState>({
+    opened: false,
+    files: [],
+    overwrite: false,
+    conflicts: [],
+    conflictDetails: [],
+    isCheckingConflicts: false,
+  });
 
   const searchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeOperationIdRef = useRef<string | null>(null);
+  const uploadOperationCacheRef = useRef<Map<string, { files: File[]; destination: string; overwrite: boolean }>>(new Map());
+  const [searchOptions, setSearchOptions] = useState<SearchOptions>({
+    use_regex: false,
+    case_sensitive: false,
+    type_filter: 'all',
+  });
+  const updateSearchOptions = useCallback((options: SearchOptions) => {
+    setSearchOptions(options);
+  }, []);
 
   const allEntries = useMemo(() => [...folders, ...files], [files, folders]);
   const entryNameByPath = useMemo(() => new Map(allEntries.map((entry) => [entry.path, entry.name])), [allEntries]);
@@ -314,13 +482,24 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     void loadOperations();
+  }, [loadOperations]);
+
+  const hasActiveOperations = useMemo(
+    () => operations.some((operation) => operation.status === 'pending' || operation.status === 'in_progress'),
+    [operations],
+  );
+
+  useEffect(() => {
+    if (!hasActiveOperations) {
+      return;
+    }
 
     const intervalId = setInterval(() => {
       void loadOperations();
     }, 4000);
 
     return () => clearInterval(intervalId);
-  }, [loadOperations]);
+  }, [hasActiveOperations, loadOperations]);
 
   useEffect(() => {
     if (!isSearching) {
@@ -437,8 +616,9 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     setPreSearchFolders([]);
   }, [preSearchFiles, preSearchFolders, stopSearchPolling]);
 
-  const performSearch = useCallback(async (query: string) => {
+  const performSearch = useCallback(async (query: string, optionsOverride?: SearchOptions) => {
     const trimmedQuery = query.trim();
+    const effectiveOptions = optionsOverride ?? searchOptions;
 
     if (!trimmedQuery) {
       clearSearch();
@@ -461,6 +641,9 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
       const { operation_id } = await searchFiles({
         path: currentPath,
         pattern: trimmedQuery,
+        use_regex: effectiveOptions.use_regex,
+        case_sensitive: effectiveOptions.case_sensitive,
+        type_filter: effectiveOptions.type_filter === 'all' ? undefined : effectiveOptions.type_filter,
         show_hidden: showHidden,
       });
 
@@ -489,8 +672,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
               return;
             }
 
-            const parsedResult = JSON.parse(operation.result);
-            const entries = (parsedResult.matches || parsedResult) as FileEntry[];
+            const entries = extractFileEntriesFromOperation(operation);
 
             if (Array.isArray(entries)) {
               setFiles(entries.filter((entry) => entry.type === 'file'));
@@ -501,7 +683,20 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
             }
 
             clearSelection();
-          } else if (operation.status === 'failed' || operation.status === 'cancelled') {
+          } else if (operation.status === 'cancelled') {
+            stopSearchPolling();
+            setIsLoading(false);
+            const partialEntries = extractFileEntriesFromOperation(operation);
+            if (partialEntries.length > 0) {
+              setFiles(partialEntries.filter((entry) => entry.type === 'file'));
+              setFolders(partialEntries.filter((entry) => entry.type === 'directory'));
+            }
+            notifications.show({
+              title: 'Search cancelled',
+              message: operation.error_message || 'The search was cancelled. Partial results may be shown.',
+              color: 'yellow',
+            });
+          } else if (operation.status === 'failed') {
             stopSearchPolling();
             setIsLoading(false);
             throw new Error(operation.error_message || 'Search operation failed');
@@ -523,7 +718,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
       setError(message);
       notifications.show({ title: 'Search Error', message, color: 'red' });
     }
-  }, [clearSearch, clearSelection, currentPath, files, folders, isSearching, showHidden, stopSearchPolling]);
+  }, [clearSearch, clearSelection, currentPath, files, folders, isSearching, searchOptions, showHidden, stopSearchPolling]);
 
   const refresh = useCallback(() => {
     void loadBookmarks();
@@ -537,6 +732,99 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
 
     void loadDirectory(currentPath);
   }, [currentPath, isSearching, loadBookmarks, loadClipboard, loadDirectory, loadOperations, performSearch, searchQuery]);
+
+  const refreshOperations = useCallback(() => {
+    void loadOperations();
+  }, [loadOperations]);
+
+  const createFolder = useCallback(() => {
+    setCreateFolderDialog({ opened: true, value: '', isSubmitting: false });
+  }, []);
+
+  const uploadFiles = useCallback(async (filesToUpload: File[]) => {
+    if (filesToUpload.length === 0) {
+      return;
+    }
+
+    setUploadDialog({
+      opened: true,
+      files: filesToUpload,
+      overwrite: false,
+      conflicts: [],
+      conflictDetails: [],
+      isCheckingConflicts: true,
+    });
+
+    try {
+      const conflicts = await ExplorerService.checkUploadConflictsExplorerUploadConflictsPost({
+        destination: currentPath,
+        files: filesToUpload.map((file) => ({ name: file.name, size: file.size })),
+        overwrite: false,
+      });
+
+      setUploadDialog((previous) => ({
+        ...previous,
+        conflicts: extractConflictPaths(conflicts),
+        conflictDetails: extractConflictDetails(conflicts),
+        isCheckingConflicts: false,
+      }));
+    } catch {
+      setUploadDialog((previous) => ({
+        ...previous,
+        conflicts: [],
+        conflictDetails: [],
+        isCheckingConflicts: false,
+      }));
+    }
+  }, [currentPath]);
+
+  const submitUpload = useCallback(async () => {
+    if (uploadDialog.files.length === 0) {
+      setUploadDialog({ opened: false, files: [], overwrite: false, conflicts: [], conflictDetails: [], isCheckingConflicts: false });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const prepareResponse = await ExplorerService.prepareUploadExplorerUploadPreparePost({
+        destination: currentPath,
+        files: uploadDialog.files.map((file) => ({ name: file.name, size: file.size })),
+        overwrite: uploadDialog.overwrite,
+      });
+      uploadOperationCacheRef.current.set(prepareResponse.operation_id, {
+        files: uploadDialog.files,
+        destination: currentPath,
+        overwrite: uploadDialog.overwrite,
+      });
+      setOperations((previous) => upsertOperation(previous, prepareResponse.operation));
+
+      const payload: Body_upload_files_explorer_upload_post = {
+        destination: currentPath,
+        overwrite: uploadDialog.overwrite,
+        operation_id: prepareResponse.operation_id,
+        files: uploadDialog.files,
+      };
+
+      const response = await ExplorerService.uploadFilesExplorerUploadPost(payload);
+      setOperations((previous) => upsertOperation(previous, response.operation));
+      await Promise.all([loadDirectory(currentPath), loadOperations()]);
+      setUploadDialog({ opened: false, files: [], overwrite: false, conflicts: [], conflictDetails: [], isCheckingConflicts: false });
+      notifications.show({
+        title: response.message?.toLowerCase().includes('partial') ? 'Upload finished with issues' : 'Upload complete',
+        message: response.message || `${uploadDialog.files.length} file${uploadDialog.files.length === 1 ? '' : 's'} uploaded`,
+        color: response.message?.toLowerCase().includes('partial') ? 'yellow' : 'green',
+      });
+    } catch (err) {
+      notifications.show({
+        title: 'Upload failed',
+        message: err instanceof Error ? err.message : 'Failed to upload files',
+        color: 'red',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  }, [currentPath, loadDirectory, loadOperations, uploadDialog.files, uploadDialog.overwrite]);
 
   const openEntry = useCallback((entry: FileEntry) => {
     if (entry.type === 'directory') {
@@ -654,8 +942,31 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const addBookmarkForEntry = useCallback(async (entry: FileEntry) => {
-    setBookmarkDialog({ opened: true, entry, value: entry.name, isSubmitting: false });
+    setBookmarkDialog({ opened: true, entry, value: entry.name, isSubmitting: false, mode: 'create' });
   }, []);
+
+  const editBookmark = useCallback((bookmark: BookmarkItem) => {
+    setBookmarkDialog({ opened: true, entry: bookmark, value: bookmark.name, isSubmitting: false, mode: 'edit' });
+  }, []);
+
+  const removeBookmark = useCallback(async (bookmark: BookmarkItem) => {
+    if (!bookmark.id) {
+      notifications.show({ title: 'Bookmark Error', message: 'This bookmark cannot be removed yet.', color: 'red' });
+      return;
+    }
+
+    try {
+      await deleteBookmark(bookmark.id);
+      await loadBookmarks();
+      notifications.show({ title: 'Bookmark removed', message: `${bookmark.name} has been removed`, color: 'green' });
+    } catch (err) {
+      notifications.show({
+        title: 'Bookmark Error',
+        message: err instanceof Error ? err.message : 'Failed to remove bookmark',
+        color: 'red',
+      });
+    }
+  }, [loadBookmarks]);
 
   const clearClipboardContents = useCallback(async () => {
     try {
@@ -669,6 +980,53 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
       });
     }
   }, [clipboardSessionId, loadClipboard]);
+
+  const cancelOperation = useCallback(async (operationId: string) => {
+    try {
+      const response: OperationResponse = await ExplorerService.cancelOperationExplorerOperationsOperationIdCancelPost(operationId);
+      setOperations((previous) => previous.map((operation) => (operation.id === operationId ? response.operation : operation)));
+      notifications.show({
+        title: 'Operation cancelled',
+        message: `Cancelled ${response.operation.operation_type.replace(/_/g, ' ')}`,
+        color: 'yellow',
+      });
+    } catch (err) {
+      notifications.show({
+        title: 'Cancel failed',
+        message: err instanceof Error ? err.message : 'Failed to cancel operation',
+        color: 'red',
+      });
+    }
+  }, []);
+
+  const retryOperation = useCallback(async (operationId: string) => {
+    const cachedUpload = uploadOperationCacheRef.current.get(operationId);
+
+    if (!cachedUpload) {
+      notifications.show({
+        title: 'Retry unavailable',
+        message: 'The original files are no longer available in this browser session.',
+        color: 'yellow',
+      });
+      return;
+    }
+
+    setCurrentPath(cachedUpload.destination);
+    setUploadDialog({
+      opened: true,
+      files: cachedUpload.files,
+      overwrite: cachedUpload.overwrite,
+      conflicts: [],
+      conflictDetails: [],
+      isCheckingConflicts: false,
+    });
+
+    notifications.show({
+      title: 'Retry ready',
+      message: 'Review the upload settings and confirm to retry.',
+      color: 'blue',
+    });
+  }, []);
 
   const dismissOperation = useCallback(async (operationId: string) => {
     try {
@@ -724,12 +1082,16 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     setBookmarkDialog((previous) => ({ ...previous, isSubmitting: true }));
 
     try {
-      await createBookmark({ name: bookmarkName, path: bookmarkDialog.entry.path, type: 'bookmark' });
+      if (bookmarkDialog.mode === 'edit' && 'id' in bookmarkDialog.entry && bookmarkDialog.entry.id) {
+        await updateBookmark(bookmarkDialog.entry.id, { name: bookmarkName });
+      } else {
+        await createBookmark({ name: bookmarkName, path: bookmarkDialog.entry.path, type: 'bookmark' });
+      }
       await Promise.all([loadBookmarks(), loadOperations()]);
-      setBookmarkDialog({ opened: false, entry: null, value: '', isSubmitting: false });
+      setBookmarkDialog({ opened: false, entry: null, value: '', isSubmitting: false, mode: 'create' });
       notifications.show({
-        title: 'Bookmark added',
-        message: `${bookmarkName} is now in bookmarks`,
+        title: bookmarkDialog.mode === 'edit' ? 'Bookmark updated' : 'Bookmark added',
+        message: bookmarkDialog.mode === 'edit' ? `${bookmarkName} has been updated` : `${bookmarkName} is now in bookmarks`,
         color: 'green',
       });
     } catch (err) {
@@ -772,6 +1134,34 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     }
   }, [clearSelection, currentPath, deleteDialog.paths, loadBookmarks, loadDirectory, loadOperations]);
 
+  const submitCreateFolder = useCallback(async () => {
+    const trimmedName = createFolderDialog.value.trim();
+
+    if (!trimmedName) {
+      return;
+    }
+
+    setCreateFolderDialog((previous) => ({ ...previous, isSubmitting: true }));
+
+    try {
+      await createDirectory({ path: buildChildPath(currentPath, trimmedName) });
+      await Promise.all([loadDirectory(currentPath), loadOperations()]);
+      setCreateFolderDialog({ opened: false, value: '', isSubmitting: false });
+      notifications.show({
+        title: 'Folder created',
+        message: `${trimmedName} is ready`,
+        color: 'green',
+      });
+    } catch (err) {
+      setCreateFolderDialog((previous) => ({ ...previous, isSubmitting: false }));
+      notifications.show({
+        title: 'Create folder failed',
+        message: err instanceof Error ? err.message : 'Failed to create folder',
+        color: 'red',
+      });
+    }
+  }, [createFolderDialog.value, currentPath, loadDirectory, loadOperations]);
+
   return (
     <ExplorerContext.Provider
       value={{
@@ -789,15 +1179,18 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
         sortOrder,
         isSearching,
         searchQuery,
+        isUploading,
         homePath,
         bookmarks,
         clipboardStatus,
         operations,
+        searchOptions,
         navigateTo,
         navigateBack,
         navigateForward,
         navigateUp,
         refresh,
+        refreshOperations,
         toggleSelection,
         clearSelection,
         setSelection,
@@ -807,6 +1200,9 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
         setSort,
         performSearch,
         clearSearch,
+        setSearchOptions: updateSearchOptions,
+        createFolder,
+        uploadFiles,
         openEntry,
         copySelection,
         cutSelection,
@@ -816,11 +1212,99 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
         deleteSelection,
         showPropertiesForPath,
         addBookmarkForEntry,
+        editBookmark,
+        removeBookmark,
         clearClipboardContents,
+        cancelOperation,
+        retryOperation,
         dismissOperation,
       }}
     >
       {children}
+
+      <Modal
+        opened={uploadDialog.opened}
+        onClose={() => !isUploading && setUploadDialog({ opened: false, files: [], overwrite: false, conflicts: [], conflictDetails: [], isCheckingConflicts: false })}
+        title="Upload files"
+        centered
+      >
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Upload {uploadDialog.files.length} file{uploadDialog.files.length === 1 ? '' : 's'} into <Code>{currentPath}</Code>.
+          </Text>
+          {uploadDialog.isCheckingConflicts ? <Text size="sm">Checking for conflicts...</Text> : null}
+          <Stack gap={4}>
+            {uploadDialog.files.slice(0, 5).map((file) => (
+              <Code key={`${file.name}-${file.size}`}>{file.name}</Code>
+            ))}
+            {uploadDialog.files.length > 5 ? <Text size="xs" c="dimmed">+{uploadDialog.files.length - 5} more</Text> : null}
+          </Stack>
+          {uploadDialog.conflicts.length > 0 ? (
+            <Stack gap={4}>
+              <Text size="sm" c="yellow">Conflicts detected</Text>
+              {uploadDialog.conflictDetails.slice(0, 5).map((conflict) => (
+                <Stack key={`${conflict.path}-${conflict.reason ?? 'conflict'}`} gap={2}>
+                  <Code>{conflict.path}</Code>
+                  {conflict.reason || conflict.existing_type ? (
+                    <Text size="xs" c="dimmed">
+                      {[conflict.reason, conflict.existing_type].filter(Boolean).join(' - ')}
+                    </Text>
+                  ) : null}
+                </Stack>
+              ))}
+              {uploadDialog.conflicts.length > 5 ? <Text size="xs" c="dimmed">+{uploadDialog.conflicts.length - 5} more conflicts</Text> : null}
+            </Stack>
+          ) : null}
+          <Checkbox
+            label="Overwrite files with the same name"
+            checked={uploadDialog.overwrite}
+            onChange={(event) => setUploadDialog((previous) => ({ ...previous, overwrite: event.currentTarget.checked }))}
+            disabled={isUploading || uploadDialog.isCheckingConflicts}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setUploadDialog({ opened: false, files: [], overwrite: false, conflicts: [], conflictDetails: [], isCheckingConflicts: false })} disabled={isUploading}>
+              Cancel
+            </Button>
+            <Button onClick={() => void submitUpload()} loading={isUploading} disabled={uploadDialog.isCheckingConflicts}>
+              Upload
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={createFolderDialog.opened}
+        onClose={() => setCreateFolderDialog({ opened: false, value: '', isSubmitting: false })}
+        title="Create folder"
+        centered
+      >
+        <Stack>
+          <Text size="sm" c="dimmed">
+            Add a new folder inside <Code>{currentPath}</Code>.
+          </Text>
+          <TextInput
+            label="Folder name"
+            value={createFolderDialog.value}
+            onChange={(event) => setCreateFolderDialog((previous) => ({ ...previous, value: event.currentTarget.value }))}
+            disabled={createFolderDialog.isSubmitting}
+            autoFocus
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                void submitCreateFolder();
+              }
+            }}
+          />
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => setCreateFolderDialog({ opened: false, value: '', isSubmitting: false })}>
+              Cancel
+            </Button>
+            <Button onClick={() => void submitCreateFolder()} loading={createFolderDialog.isSubmitting}>
+              Create folder
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       <Modal
         opened={renameDialog.opened}
@@ -858,8 +1342,8 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
 
       <Modal
         opened={bookmarkDialog.opened}
-        onClose={() => setBookmarkDialog({ opened: false, entry: null, value: '', isSubmitting: false })}
-        title="Add bookmark"
+        onClose={() => setBookmarkDialog({ opened: false, entry: null, value: '', isSubmitting: false, mode: 'create' })}
+        title={bookmarkDialog.mode === 'edit' ? 'Edit bookmark' : 'Add bookmark'}
         centered
       >
         <Stack>
@@ -880,11 +1364,11 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
             }}
           />
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setBookmarkDialog({ opened: false, entry: null, value: '', isSubmitting: false })}>
+            <Button variant="default" onClick={() => setBookmarkDialog({ opened: false, entry: null, value: '', isSubmitting: false, mode: 'create' })}>
               Cancel
             </Button>
             <Button onClick={() => void submitBookmark()} loading={bookmarkDialog.isSubmitting}>
-              Save bookmark
+              {bookmarkDialog.mode === 'edit' ? 'Update bookmark' : 'Save bookmark'}
             </Button>
           </Group>
         </Stack>
@@ -929,20 +1413,17 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
           <Text size="sm" c="dimmed">Loading item details...</Text>
         ) : propertiesDialog.entry ? (
           <Stack gap="sm">
-            <Group justify="space-between" align="flex-start">
-              <Text size="sm" c="dimmed">Path</Text>
-              <Code>{propertiesDialog.entry.path}</Code>
-            </Group>
+            <PropertyRow label="Path" value={<Code style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{propertiesDialog.entry.path}</Code>} />
             <Divider />
-            <Group justify="space-between"><Text size="sm" c="dimmed">Type</Text><Text size="sm">{propertiesDialog.entry.type}</Text></Group>
-            <Group justify="space-between"><Text size="sm" c="dimmed">Size</Text><Text size="sm">{propertiesDialog.entry.size_human}</Text></Group>
-            <Group justify="space-between"><Text size="sm" c="dimmed">Modified</Text><Text size="sm">{propertiesDialog.entry.modified ?? '--'}</Text></Group>
-            <Group justify="space-between"><Text size="sm" c="dimmed">Owner</Text><Text size="sm">{propertiesDialog.entry.owner}:{propertiesDialog.entry.group}</Text></Group>
-            <Group justify="space-between"><Text size="sm" c="dimmed">Permissions</Text><Code>{propertiesDialog.entry.permissions}</Code></Group>
-            <Group justify="space-between"><Text size="sm" c="dimmed">Hidden</Text><Text size="sm">{propertiesDialog.entry.is_hidden ? 'Yes' : 'No'}</Text></Group>
-            <Group justify="space-between"><Text size="sm" c="dimmed">Symlink</Text><Text size="sm">{propertiesDialog.entry.is_symlink ? 'Yes' : 'No'}</Text></Group>
+            <PropertyRow label="Type" value={<Text size="sm">{propertiesDialog.entry.type}</Text>} />
+            <PropertyRow label="Size" value={<Text size="sm">{propertiesDialog.entry.size_human}</Text>} />
+            <PropertyRow label="Modified" value={<Text size="sm">{propertiesDialog.entry.modified ?? '--'}</Text>} />
+            <PropertyRow label="Owner" value={<Text size="sm" style={{ overflowWrap: 'anywhere' }}>{propertiesDialog.entry.owner}:{propertiesDialog.entry.group}</Text>} />
+            <PropertyRow label="Permissions" value={<Code>{propertiesDialog.entry.permissions}</Code>} />
+            <PropertyRow label="Hidden" value={<Text size="sm">{propertiesDialog.entry.is_hidden ? 'Yes' : 'No'}</Text>} />
+            <PropertyRow label="Symlink" value={<Text size="sm">{propertiesDialog.entry.is_symlink ? 'Yes' : 'No'}</Text>} />
             {propertiesDialog.entry.mime_type ? (
-              <Group justify="space-between"><Text size="sm" c="dimmed">MIME type</Text><Text size="sm">{propertiesDialog.entry.mime_type}</Text></Group>
+              <PropertyRow label="MIME type" value={<Text size="sm" style={{ overflowWrap: 'anywhere' }}>{propertiesDialog.entry.mime_type}</Text>} />
             ) : null}
           </Stack>
         ) : (
@@ -950,5 +1431,14 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
         )}
       </Modal>
     </ExplorerContext.Provider>
+  );
+}
+
+function PropertyRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <Stack gap={4}>
+      <Text size="sm" c="dimmed">{label}</Text>
+      {value}
+    </Stack>
   );
 }

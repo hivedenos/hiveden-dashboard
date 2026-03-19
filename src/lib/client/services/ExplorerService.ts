@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { Body_upload_files_explorer_upload_post } from '../models/Body_upload_files_explorer_upload_post';
 import type { ClipboardCopyRequest } from '../models/ClipboardCopyRequest';
 import type { ClipboardPasteRequest } from '../models/ClipboardPasteRequest';
 import type { ClipboardStatusResponse } from '../models/ClipboardStatusResponse';
@@ -18,6 +19,9 @@ import type { RenameRequest } from '../models/RenameRequest';
 import type { SearchRequest } from '../models/SearchRequest';
 import { SortBy } from '../models/SortBy';
 import { SortOrder } from '../models/SortOrder';
+import type { UploadPrepareRequest } from '../models/UploadPrepareRequest';
+import type { UploadPrepareResponse } from '../models/UploadPrepareResponse';
+import type { UploadResponse } from '../models/UploadResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -115,6 +119,63 @@ export class ExplorerService {
             url: '/explorer/create-directory',
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Prepare Upload
+     * @param requestBody
+     * @returns UploadPrepareResponse Successful Response
+     * @throws ApiError
+     */
+    public static prepareUploadExplorerUploadPreparePost(
+        requestBody: UploadPrepareRequest,
+    ): CancelablePromise<UploadPrepareResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/explorer/upload/prepare',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Check Upload Conflicts
+     * @param requestBody
+     * @returns any Successful Response
+     * @throws ApiError
+     */
+    public static checkUploadConflictsExplorerUploadConflictsPost(
+        requestBody: UploadPrepareRequest,
+    ): CancelablePromise<any> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/explorer/upload/conflicts',
+            body: requestBody,
+            mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Upload Files
+     * @param formData
+     * @returns UploadResponse Successful Response
+     * @throws ApiError
+     */
+    public static uploadFilesExplorerUploadPost(
+        formData: Body_upload_files_explorer_upload_post,
+    ): CancelablePromise<UploadResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/explorer/upload',
+            formData: formData,
+            mediaType: 'multipart/form-data',
             errors: {
                 422: `Validation Error`,
             },
@@ -442,6 +503,26 @@ export class ExplorerService {
                 'operation_type': operationType,
                 'limit': limit,
                 'offset': offset,
+            },
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Cancel Operation
+     * @param operationId
+     * @returns OperationResponse Successful Response
+     * @throws ApiError
+     */
+    public static cancelOperationExplorerOperationsOperationIdCancelPost(
+        operationId: string,
+    ): CancelablePromise<OperationResponse> {
+        return __request(OpenAPI, {
+            method: 'POST',
+            url: '/explorer/operations/{operation_id}/cancel',
+            path: {
+                'operation_id': operationId,
             },
             errors: {
                 422: `Validation Error`,

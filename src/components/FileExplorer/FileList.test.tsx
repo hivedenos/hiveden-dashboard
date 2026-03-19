@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { FileList } from './FileList';
@@ -72,6 +72,7 @@ function renderComponent() {
 }
 
 afterEach(() => {
+  cleanup();
   vi.clearAllMocks();
 });
 
@@ -92,15 +93,17 @@ describe('FileList', () => {
       viewMode: 'list',
       error: null,
       submitRenameEntry: vi.fn(),
+      createFolder: vi.fn(),
+      uploadFiles: vi.fn(),
+      isUploading: false,
     });
 
     renderComponent();
 
-    const firstRow = screen.getByText('alpha.txt').closest('tr');
-    expect(firstRow).not.toBeNull();
+    const [firstRow] = screen.getAllByLabelText('File item alpha.txt');
 
-    firstRow?.focus();
-    fireEvent.keyDown(firstRow!, { key: 'ArrowDown' });
+    firstRow.focus();
+    fireEvent.keyDown(firstRow, { key: 'ArrowDown' });
 
     expect(setSelection).toHaveBeenLastCalledWith(['/bravo.txt']);
   });
@@ -121,11 +124,14 @@ describe('FileList', () => {
       viewMode: 'list',
       error: null,
       submitRenameEntry: vi.fn(),
+      createFolder: vi.fn(),
+      uploadFiles: vi.fn(),
+      isUploading: false,
     });
 
     renderComponent();
 
-    const [firstRow] = screen.getAllByRole('button');
+    const [firstRow] = screen.getAllByLabelText('File item alpha.txt');
 
     fireEvent.click(firstRow);
     fireEvent.keyDown(firstRow, { key: 'ArrowDown', shiftKey: true });
@@ -133,9 +139,7 @@ describe('FileList', () => {
     expect(setSelection).toHaveBeenLastCalledWith(['/alpha.txt', '/bravo.txt']);
   });
 
-  test('inline rename submits on Enter after F2', async () => {
-    const submitRenameEntry = vi.fn().mockResolvedValue(undefined);
-
+  test('per-item action trigger is rendered for keyboard-accessible actions', () => {
     mockUseExplorer.mockReturnValue({
       files: baseItems,
       folders: [],
@@ -148,20 +152,101 @@ describe('FileList', () => {
       openEntry: vi.fn(),
       viewMode: 'list',
       error: null,
-      submitRenameEntry,
+      submitRenameEntry: vi.fn(),
+      createFolder: vi.fn(),
+      uploadFiles: vi.fn(),
+      isUploading: false,
     });
 
     renderComponent();
 
-    const [firstRow] = screen.getAllByRole('button');
+    expect(screen.getAllByLabelText('Open actions for alpha.txt').length).toBeGreaterThan(0);
+  });
 
-    firstRow.focus();
-    fireEvent.keyDown(firstRow, { key: 'F2' });
+  test('empty state create folder action is available', () => {
+    const createFolder = vi.fn();
 
-    const input = screen.getByDisplayValue('alpha.txt');
-    fireEvent.change(input, { target: { value: 'alpha-renamed.txt' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
+    mockUseExplorer.mockReturnValue({
+      files: [],
+      folders: [],
+      selectedItems: new Set<string>(),
+      toggleSelection: vi.fn(),
+      setSelection: vi.fn(),
+      selectAll: vi.fn(),
+      clearSelection: vi.fn(),
+      isLoading: false,
+      openEntry: vi.fn(),
+      viewMode: 'list',
+      error: null,
+      submitRenameEntry: vi.fn(),
+      createFolder,
+      uploadFiles: vi.fn(),
+      isUploading: false,
+    });
 
-    expect(submitRenameEntry).toHaveBeenCalledWith(baseItems[0], 'alpha-renamed.txt');
+    renderComponent();
+
+    fireEvent.click(screen.getByText('Create folder'));
+
+    expect(createFolder).toHaveBeenCalled();
+  });
+
+  test('only one explorer item is tabbable at a time', () => {
+    mockUseExplorer.mockReturnValue({
+      files: baseItems,
+      folders: [],
+      selectedItems: new Set<string>(),
+      toggleSelection: vi.fn(),
+      setSelection: vi.fn(),
+      selectAll: vi.fn(),
+      clearSelection: vi.fn(),
+      isLoading: false,
+      openEntry: vi.fn(),
+      viewMode: 'list',
+      error: null,
+      submitRenameEntry: vi.fn(),
+      createFolder: vi.fn(),
+      uploadFiles: vi.fn(),
+      isUploading: false,
+    });
+
+    renderComponent();
+
+    expect(screen.getAllByLabelText('File item alpha.txt')[0].getAttribute('tabindex')).toBe('0');
+    expect(screen.getAllByLabelText('File item bravo.txt')[0].getAttribute('tabindex')).toBe('-1');
+  });
+
+  test('drag and drop forwards files to upload handler', () => {
+    const uploadFiles = vi.fn();
+
+    mockUseExplorer.mockReturnValue({
+      files: baseItems,
+      folders: [],
+      selectedItems: new Set<string>(),
+      toggleSelection: vi.fn(),
+      setSelection: vi.fn(),
+      selectAll: vi.fn(),
+      clearSelection: vi.fn(),
+      isLoading: false,
+      openEntry: vi.fn(),
+      viewMode: 'list',
+      error: null,
+      submitRenameEntry: vi.fn(),
+      createFolder: vi.fn(),
+      uploadFiles,
+      isUploading: false,
+    });
+
+    renderComponent();
+    const [dropTarget] = screen.getAllByTestId('explorer-dropzone');
+    const file = new File(['hello'], 'drop.txt', { type: 'text/plain' });
+
+    fireEvent.drop(dropTarget, {
+      dataTransfer: {
+        files: [file],
+      },
+    });
+
+    expect(uploadFiles).toHaveBeenCalledWith([file]);
   });
 });

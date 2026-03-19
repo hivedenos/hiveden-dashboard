@@ -1,5 +1,7 @@
 'use server';
 
+import '@/lib/api';
+
 import { ExplorerService } from '@/lib/client';
 import { 
   ClipboardStatusResponse,
@@ -12,6 +14,7 @@ import {
   ClipboardCopyRequest,
   ClipboardPasteRequest,
   LocationCreateRequest,
+  LocationUpdateRequest,
   SearchRequest,
   SortBy,
   SortOrder,
@@ -77,6 +80,18 @@ export async function listBookmarks() {
 
 export async function createBookmark(request: LocationCreateRequest) {
   const result = await ExplorerService.createBookmarkExplorerBookmarksPost(request);
+  revalidatePath('/files');
+  return result;
+}
+
+export async function updateBookmark(bookmarkId: number, request: LocationUpdateRequest) {
+  const result = await ExplorerService.updateBookmarkExplorerBookmarksBookmarkIdPut(bookmarkId, request);
+  revalidatePath('/files');
+  return result;
+}
+
+export async function deleteBookmark(bookmarkId: number) {
+  const result = await ExplorerService.deleteBookmarkExplorerBookmarksBookmarkIdDelete(bookmarkId);
   revalidatePath('/files');
   return result;
 }

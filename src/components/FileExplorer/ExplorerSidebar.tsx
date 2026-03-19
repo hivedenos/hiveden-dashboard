@@ -1,18 +1,32 @@
 'use client';
 
-import { Stack, NavLink, Text, Group, ScrollArea } from '@mantine/core';
+import { ActionIcon, Group, Menu, NavLink, ScrollArea, Stack, Text } from '@mantine/core';
 import { 
-  IconHome, 
+  IconDots,
+  IconHome,
   IconCurrentLocation,
+  IconPencil,
+  IconTrash,
   IconStar 
 } from '@tabler/icons-react';
 import { useExplorer } from './ExplorerProvider';
 
-export function ExplorerSidebar() {
-  const { navigateTo, currentPath, homePath, bookmarks } = useExplorer();
+export function ExplorerSidebar({ compact = false, onNavigate }: { compact?: boolean; onNavigate?: () => void } = {}) {
+  const { navigateTo, currentPath, homePath, bookmarks, editBookmark, removeBookmark } = useExplorer();
+
+  const handleNavigate = (path: string) => {
+    navigateTo(path);
+    onNavigate?.();
+  };
 
   return (
-    <Stack gap={0} h="100%" w={240} style={{ borderRight: '1px solid var(--mantine-color-default-border)' }} bg="var(--mantine-color-body)">
+    <Stack
+      gap={0}
+      h="100%"
+      w={compact ? '100%' : 240}
+      style={{ borderRight: compact ? undefined : '1px solid var(--mantine-color-default-border)' }}
+      bg="var(--mantine-color-body)"
+    >
       <ScrollArea style={{ flex: 1 }}>
         <Stack gap="md" p="md">
           
@@ -22,26 +36,43 @@ export function ExplorerSidebar() {
               icon={<IconHome size={16} />} 
               label="Root" 
               active={currentPath === '/'} 
-              onClick={() => navigateTo('/')}
+              onClick={() => handleNavigate('/')}
             />
             <NavItem 
               icon={<IconCurrentLocation size={16} />} 
               label="Workspace" 
               active={currentPath === homePath} 
-              onClick={() => navigateTo(homePath)}
+              onClick={() => handleNavigate(homePath)}
             />
           </BoxSection>
 
           <BoxSection title="Bookmarks">
             {bookmarks.length > 0 ? (
               bookmarks.map((bookmark) => (
-                <NavItem
-                  key={bookmark.path}
-                  icon={<IconStar size={16} />}
-                  label={bookmark.name}
-                  active={currentPath === bookmark.path}
-                  onClick={() => navigateTo(bookmark.path)}
-                />
+                <Group key={bookmark.path} gap="xs" wrap="nowrap">
+                  <NavItem
+                    icon={<IconStar size={16} />}
+                    label={bookmark.name}
+                    active={currentPath === bookmark.path}
+                    onClick={() => handleNavigate(bookmark.path)}
+                    style={{ flex: 1 }}
+                  />
+                  <Menu position="bottom-end" withinPortal>
+                    <Menu.Target>
+                      <ActionIcon variant="subtle" color="gray" aria-label={`Manage bookmark ${bookmark.name}`}>
+                        <IconDots size={16} />
+                      </ActionIcon>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                      <Menu.Item leftSection={<IconPencil size={14} />} onClick={() => editBookmark(bookmark)}>
+                        Rename
+                      </Menu.Item>
+                      <Menu.Item color="red" leftSection={<IconTrash size={14} />} onClick={() => void removeBookmark(bookmark)}>
+                        Remove
+                      </Menu.Item>
+                    </Menu.Dropdown>
+                  </Menu>
+                </Group>
               ))
             ) : (
               <Text size="xs" c="dimmed" fs="italic">Add a bookmark from the context menu</Text>
@@ -68,7 +99,7 @@ function BoxSection({ title, children, rightSection }: { title: string, children
     )
 }
 
-function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void }) {
+function NavItem({ icon, label, active, onClick, style }: { icon: React.ReactNode, label: string, active: boolean, onClick: () => void, style?: React.CSSProperties }) {
     return (
         <NavLink
             label={label}
@@ -76,7 +107,7 @@ function NavItem({ icon, label, active, onClick }: { icon: React.ReactNode, labe
             active={active}
             onClick={onClick}
             variant="light"
-            style={{ borderRadius: 'var(--mantine-radius-sm)' }}
+            style={{ borderRadius: 'var(--mantine-radius-sm)', ...style }}
         />
     )
 }
