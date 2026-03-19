@@ -376,6 +376,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
   const searchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeOperationIdRef = useRef<string | null>(null);
   const uploadOperationCacheRef = useRef<Map<string, { files: File[]; destination: string; overwrite: boolean }>>(new Map());
+  const operationPollersRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   const [searchOptions, setSearchOptions] = useState<SearchOptions>({
     use_regex: false,
     case_sensitive: false,
@@ -424,6 +425,14 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const stopOperationPolling = useCallback((operationId: string) => {
+    const poller = operationPollersRef.current.get(operationId);
+    if (poller) {
+      clearInterval(poller);
+      operationPollersRef.current.delete(operationId);
+    }
+  }, []);
+
   const loadDirectory = useCallback(
     async (path: string) => {
       setIsLoading(true);
@@ -444,6 +453,28 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     },
     [showHidden, sortBy, sortOrder],
   );
+
+  const startOperationPolling = useCallback((operationId: string) => {
+    if (operationPollersRef.current.has(operationId)) {
+      return;
+    }
+
+    const poller = setInterval(async () => {
+      try {
+        const response = await getOperationStatus(operationId);
+        setOperations((previous) => upsertOperation(previous, response.operation));
+
+        if (!['pending', 'in_progress'].includes(response.operation.status)) {
+          stopOperationPolling(operationId);
+          await Promise.all([loadOperations(), loadDirectory(currentPath)]);
+        }
+      } catch {
+        stopOperationPolling(operationId);
+      }
+    }, 1000);
+
+    operationPollersRef.current.set(operationId, poller);
+  }, [currentPath, loadDirectory, loadOperations, stopOperationPolling]);
 
   useEffect(() => {
     let mounted = true;
@@ -476,6 +507,8 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     return () => {
       mounted = false;
       stopSearchPolling();
+      operationPollersRef.current.forEach((poller) => clearInterval(poller));
+      operationPollersRef.current.clear();
     };
   }, [loadBookmarks, loadClipboard, loadOperations, stopSearchPolling]);
 
@@ -798,6 +831,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
         overwrite: uploadDialog.overwrite,
       });
       setOperations((previous) => upsertOperation(previous, prepareResponse.operation));
+      startOperationPolling(prepareResponse.operation_id);
 
       const payload: Body_upload_files_explorer_upload_post = {
         destination: currentPath,
@@ -806,25 +840,43 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
         files: uploadDialog.files,
       };
 
-      const response = await ExplorerService.uploadFilesExplorerUploadPost(payload);
-      setOperations((previous) => upsertOperation(previous, response.operation));
-      await Promise.all([loadDirectory(currentPath), loadOperations()]);
       setUploadDialog({ opened: false, files: [], overwrite: false, conflicts: [], conflictDetails: [], isCheckingConflicts: false });
+      setIsUploading(false);
       notifications.show({
-        title: response.message?.toLowerCase().includes('partial') ? 'Upload finished with issues' : 'Upload complete',
-        message: response.message || `${uploadDialog.files.length} file${uploadDialog.files.length === 1 ? '' : 's'} uploaded`,
-        color: response.message?.toLowerCase().includes('partial') ? 'yellow' : 'green',
+        title: 'Upload started',
+        message: 'Your files are uploading now. Track progress in the Operations panel.',
+        color: 'blue',
       });
+
+      void ExplorerService.uploadFilesExplorerUploadPost(payload)
+        .then(async (response) => {
+          setOperations((previous) => upsertOperation(previous, response.operation));
+          await Promise.all([loadDirectory(currentPath), loadOperations()]);
+          notifications.show({
+            title: response.message?.toLowerCase().includes('partial') ? 'Upload finished with issues' : 'Upload complete',
+            message: response.message || `${uploadDialog.files.length} file${uploadDialog.files.length === 1 ? '' : 's'} uploaded`,
+            color: response.message?.toLowerCase().includes('partial') ? 'yellow' : 'green',
+          });
+        })
+        .catch((err) => {
+          notifications.show({
+            title: 'Upload failed',
+            message: err instanceof Error ? err.message : 'Failed to upload files',
+            color: 'red',
+          });
+        })
+        .finally(() => {
+          stopOperationPolling(prepareResponse.operation_id);
+        });
     } catch (err) {
       notifications.show({
         title: 'Upload failed',
         message: err instanceof Error ? err.message : 'Failed to upload files',
         color: 'red',
       });
-    } finally {
       setIsUploading(false);
     }
-  }, [currentPath, loadDirectory, loadOperations, uploadDialog.files, uploadDialog.overwrite]);
+  }, [currentPath, loadDirectory, loadOperations, startOperationPolling, stopOperationPolling, uploadDialog.files, uploadDialog.overwrite]);
 
   const openEntry = useCallback((entry: FileEntry) => {
     if (entry.type === 'directory') {
