@@ -1,6 +1,24 @@
 import { OpenAPI } from './client';
 
-const API_BASE_URL = 'http://localhost:8000';
+function normalizeBaseUrl(value: string) {
+  return value.replace(/\/$/, '');
+}
+
+export function getApiBaseUrl() {
+  const configuredUrl = process.env.NEXT_PUBLIC_API_BASE_URL || process.env.API_BASE_URL;
+
+  if (configuredUrl) {
+    return normalizeBaseUrl(configuredUrl);
+  }
+
+  if (typeof window !== 'undefined') {
+    return normalizeBaseUrl(`${window.location.protocol}//${window.location.hostname}:8000`);
+  }
+
+  return 'http://localhost:8000';
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Configure generated client
 OpenAPI.BASE = API_BASE_URL;

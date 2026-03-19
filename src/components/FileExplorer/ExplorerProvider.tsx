@@ -70,7 +70,6 @@ type DeleteDialogState = {
 
 type CreateFolderDialogState = {
   opened: boolean;
-  value: string;
   isSubmitting: boolean;
 };
 
@@ -356,9 +355,9 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
   });
   const [createFolderDialog, setCreateFolderDialog] = useState<CreateFolderDialogState>({
     opened: false,
-    value: '',
     isSubmitting: false,
   });
+  const [createFolderName, setCreateFolderName] = useState('');
   const [propertiesDialog, setPropertiesDialog] = useState<PropertiesDialogState>({
     opened: false,
     path: null,
@@ -738,7 +737,8 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
   }, [loadOperations]);
 
   const createFolder = useCallback(() => {
-    setCreateFolderDialog({ opened: true, value: '', isSubmitting: false });
+    setCreateFolderName('');
+    setCreateFolderDialog({ opened: true, isSubmitting: false });
   }, []);
 
   const uploadFiles = useCallback(async (filesToUpload: File[]) => {
@@ -1135,7 +1135,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
   }, [clearSelection, currentPath, deleteDialog.paths, loadBookmarks, loadDirectory, loadOperations]);
 
   const submitCreateFolder = useCallback(async () => {
-    const trimmedName = createFolderDialog.value.trim();
+    const trimmedName = createFolderName.trim();
 
     if (!trimmedName) {
       return;
@@ -1146,7 +1146,8 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     try {
       await createDirectory({ path: buildChildPath(currentPath, trimmedName) });
       await Promise.all([loadDirectory(currentPath), loadOperations()]);
-      setCreateFolderDialog({ opened: false, value: '', isSubmitting: false });
+      setCreateFolderName('');
+      setCreateFolderDialog({ opened: false, isSubmitting: false });
       notifications.show({
         title: 'Folder created',
         message: `${trimmedName} is ready`,
@@ -1160,7 +1161,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
         color: 'red',
       });
     }
-  }, [createFolderDialog.value, currentPath, loadDirectory, loadOperations]);
+  }, [createFolderName, currentPath, loadDirectory, loadOperations]);
 
   return (
     <ExplorerContext.Provider
@@ -1274,7 +1275,10 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
 
       <Modal
         opened={createFolderDialog.opened}
-        onClose={() => setCreateFolderDialog({ opened: false, value: '', isSubmitting: false })}
+        onClose={() => {
+          setCreateFolderName('');
+          setCreateFolderDialog({ opened: false, isSubmitting: false });
+        }}
         title="Create folder"
         centered
       >
@@ -1284,8 +1288,8 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
           </Text>
           <TextInput
             label="Folder name"
-            value={createFolderDialog.value}
-            onChange={(event) => setCreateFolderDialog((previous) => ({ ...previous, value: event.currentTarget.value }))}
+            value={createFolderName}
+            onChange={(event) => setCreateFolderName(event.currentTarget.value)}
             disabled={createFolderDialog.isSubmitting}
             autoFocus
             onKeyDown={(event) => {
@@ -1296,7 +1300,10 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
             }}
           />
           <Group justify="flex-end">
-            <Button variant="default" onClick={() => setCreateFolderDialog({ opened: false, value: '', isSubmitting: false })}>
+            <Button variant="default" onClick={() => {
+              setCreateFolderName('');
+              setCreateFolderDialog({ opened: false, isSubmitting: false });
+            }}>
               Cancel
             </Button>
             <Button onClick={() => void submitCreateFolder()} loading={createFolderDialog.isSubmitting}>

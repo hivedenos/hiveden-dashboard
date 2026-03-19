@@ -1,7 +1,7 @@
+import { getApiBaseUrl } from './api';
+
 export function getHttpBaseUrl() {
-    if (typeof window === 'undefined') return 'http://localhost:8000'; // Fallback for server-side
-    const protocol = window.location.protocol;
-    return `${protocol}//${window.location.hostname}:8000`; // Assuming API is on port 8000
+    return getApiBaseUrl();
 }
 
 export function getWebSocketUrl() {
