@@ -22,6 +22,7 @@ import { useEffect, useRef, useState } from 'react';
 import { SortBy, SortOrder } from '@/lib/client';
 
 import { useExplorer } from './ExplorerProvider';
+import { createUploadEntriesFromFiles } from './uploadEntries';
 
 export function ExplorerToolbar({ onToggleOperations, onToggleSidebar }: { onToggleOperations: () => void; onToggleSidebar: () => void }) {
   const {
@@ -54,6 +55,7 @@ export function ExplorerToolbar({ onToggleOperations, onToggleSidebar }: { onTog
   const [searchValue, setSearchValue] = useState('');
   const [searchDetailsOpen, setSearchDetailsOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const directoryInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     setPathValue(currentPath);
@@ -64,6 +66,15 @@ export function ExplorerToolbar({ onToggleOperations, onToggleSidebar }: { onTog
       setSearchValue('');
     }
   }, [isSearching, searchValue]);
+
+  useEffect(() => {
+    if (!directoryInputRef.current) {
+      return;
+    }
+
+    directoryInputRef.current.setAttribute('webkitdirectory', '');
+    directoryInputRef.current.setAttribute('directory', '');
+  }, []);
 
   const handlePathSubmit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -104,7 +115,16 @@ export function ExplorerToolbar({ onToggleOperations, onToggleSidebar }: { onTog
   };
 
   const handleFileSelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFiles = Array.from(event.target.files ?? []);
+    const selectedFiles = createUploadEntriesFromFiles(Array.from(event.target.files ?? []));
+    if (selectedFiles.length > 0) {
+      await uploadFiles(selectedFiles);
+    }
+
+    event.target.value = '';
+  };
+
+  const handleDirectorySelection = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = createUploadEntriesFromFiles(Array.from(event.target.files ?? []));
     if (selectedFiles.length > 0) {
       await uploadFiles(selectedFiles);
     }
@@ -152,14 +172,26 @@ export function ExplorerToolbar({ onToggleOperations, onToggleSidebar }: { onTog
             <IconFolderPlus size={18} />
           </ActionIcon>
 
-          <ActionIcon
-            variant="default"
-            aria-label="Upload files"
-            onClick={() => fileInputRef.current?.click()}
-            loading={isUploading}
-          >
-            <IconUpload size={18} />
-          </ActionIcon>
+          <Menu shadow="md" width={180} position="bottom-end">
+            <Menu.Target>
+              <ActionIcon
+                variant="default"
+                aria-label="Upload files"
+                loading={isUploading}
+              >
+                <IconUpload size={18} />
+              </ActionIcon>
+            </Menu.Target>
+
+            <Menu.Dropdown>
+              <Menu.Item leftSection={<IconUpload size={16} />} onClick={() => fileInputRef.current?.click()}>
+                Upload files
+              </Menu.Item>
+              <Menu.Item leftSection={<IconUpload size={16} />} onClick={() => directoryInputRef.current?.click()}>
+                Upload folder
+              </Menu.Item>
+            </Menu.Dropdown>
+          </Menu>
 
           <Menu shadow="md" width={220} position="bottom-end">
             <Menu.Target>
@@ -193,6 +225,7 @@ export function ExplorerToolbar({ onToggleOperations, onToggleSidebar }: { onTog
       </Group>
 
       <input ref={fileInputRef} type="file" multiple hidden onChange={(event) => void handleFileSelection(event)} />
+      <input ref={directoryInputRef} type="file" multiple hidden data-testid="directory-upload-input" onChange={(event) => void handleDirectorySelection(event)} />
 
       <Group align="stretch" wrap="wrap" gap="sm">
         <ActionIcon variant="default" aria-label="Open locations" hiddenFrom="md" onClick={onToggleSidebar}>

@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 
 import { FileList } from './FileList';
@@ -216,7 +216,7 @@ describe('FileList', () => {
     expect(screen.getAllByLabelText('File item bravo.txt')[0].getAttribute('tabindex')).toBe('-1');
   });
 
-  test('drag and drop forwards files to upload handler', () => {
+  test('drag and drop forwards files to upload handler', async () => {
     const uploadFiles = vi.fn();
 
     mockUseExplorer.mockReturnValue({
@@ -247,6 +247,10 @@ describe('FileList', () => {
       },
     });
 
-    expect(uploadFiles).toHaveBeenCalledWith([file]);
+    await waitFor(() => {
+      expect(uploadFiles).toHaveBeenCalledWith([
+        { file, relativePath: 'drop.txt' },
+      ]);
+    });
   });
 });

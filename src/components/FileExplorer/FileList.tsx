@@ -21,6 +21,7 @@ import { FileEntry } from '@/lib/client';
 
 import { useExplorer } from './ExplorerProvider';
 import { FileContextMenu } from './FileContextMenu';
+import { extractUploadEntriesFromDataTransfer } from './uploadEntries';
 
 export function FileList() {
   const {
@@ -277,7 +278,7 @@ export function FileList() {
     event.stopPropagation();
     setIsDragActive(false);
 
-    const droppedFiles = Array.from(event.dataTransfer.files ?? []);
+    const droppedFiles = await extractUploadEntriesFromDataTransfer(event.dataTransfer);
     if (droppedFiles.length > 0) {
       await uploadFiles(droppedFiles);
     }
@@ -328,7 +329,7 @@ export function FileList() {
               <Text size="sm" fw={600}>Create folder</Text>
             </Group>
           </Card>
-          <Text size="xs">or drag files here to upload</Text>
+          <Text size="xs">or drag files or folders here to upload</Text>
           {isUploading ? <Text size="xs">Uploading files...</Text> : null}
         </Stack>
         <FileContextMenu
@@ -648,7 +649,7 @@ export function FileList() {
         >
           <Group gap="sm" wrap="nowrap">
             <IconUpload size={20} />
-            <Text fw={600}>{isUploading ? 'Uploading...' : 'Drop files to upload to this folder'}</Text>
+            <Text fw={600}>{isUploading ? 'Uploading...' : 'Drop files or folders to upload to this folder'}</Text>
           </Group>
         </Card>
       ) : null}

@@ -121,6 +121,51 @@ describe('ExplorerToolbar', () => {
 
     fireEvent.change(input, { target: { files: [file] } });
 
-    expect(uploadFiles).toHaveBeenCalledWith([file]);
+    expect(uploadFiles).toHaveBeenCalledWith([
+      { file, relativePath: 'hello.txt' },
+    ]);
+  });
+
+  test('folder picker preserves relative paths', () => {
+    const uploadFiles = vi.fn();
+    const folderFile = new File(['hello'], 'nested.txt', { type: 'text/plain' });
+    Object.defineProperty(folderFile, 'webkitRelativePath', {
+      value: 'docs/nested.txt',
+      configurable: true,
+    });
+
+    mockUseExplorer.mockReturnValue({
+      currentPath: '/workspace',
+      navigateBack: vi.fn(),
+      navigateForward: vi.fn(),
+      navigateUp: vi.fn(),
+      navigateTo: vi.fn(),
+      viewMode: 'list',
+      setViewMode: vi.fn(),
+      historyIndex: 0,
+      history: ['/workspace'],
+      toggleHidden: vi.fn(),
+      showHidden: false,
+      setSort: vi.fn(),
+      sortBy: 'name',
+      sortOrder: 'asc',
+      performSearch: vi.fn(),
+      clearSearch: vi.fn(),
+      isSearching: false,
+      createFolder: vi.fn(),
+      uploadFiles,
+      isUploading: false,
+      searchOptions: { use_regex: false, case_sensitive: false, type_filter: 'all' },
+      setSearchOptions: vi.fn(),
+    });
+
+    renderComponent();
+    const input = screen.getByTestId('directory-upload-input');
+
+    fireEvent.change(input, { target: { files: [folderFile] } });
+
+    expect(uploadFiles).toHaveBeenCalledWith([
+      { file: folderFile, relativePath: 'docs/nested.txt' },
+    ]);
   });
 });

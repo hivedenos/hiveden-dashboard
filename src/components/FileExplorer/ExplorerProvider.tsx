@@ -37,6 +37,8 @@ import {
   SortOrder,
 } from '@/lib/client';
 
+import { UploadEntry } from './uploadEntries';
+
 type ViewMode = 'list' | 'grid';
 
 type BookmarkItem = {
@@ -82,7 +84,7 @@ type PropertiesDialogState = {
 
 type UploadDialogState = {
   opened: boolean;
-  files: File[];
+  files: UploadEntry[];
   overwrite: boolean;
   conflicts: string[];
   conflictDetails: Array<{ path: string; reason?: string; existing_type?: string }>;
@@ -130,7 +132,7 @@ interface ExplorerContextType extends ExplorerState {
   clearSearch: () => void;
   setSearchOptions: (options: SearchOptions) => void;
   createFolder: () => void;
-  uploadFiles: (files: File[]) => Promise<void>;
+  uploadFiles: (files: UploadEntry[]) => Promise<void>;
   openEntry: (entry: FileEntry) => void;
   copySelection: (paths?: string[]) => Promise<void>;
   cutSelection: (paths?: string[]) => Promise<void>;
@@ -375,7 +377,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
 
   const searchIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const activeOperationIdRef = useRef<string | null>(null);
-  const uploadOperationCacheRef = useRef<Map<string, { files: File[]; destination: string; overwrite: boolean }>>(new Map());
+  const uploadOperationCacheRef = useRef<Map<string, { files: UploadEntry[]; destination: string; overwrite: boolean }>>(new Map());
   const operationPollersRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
   const [searchOptions, setSearchOptions] = useState<SearchOptions>({
     use_regex: false,
@@ -776,7 +778,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     setCreateFolderDialog({ opened: true, isSubmitting: false });
   }, []);
 
-  const uploadFiles = useCallback(async (filesToUpload: File[]) => {
+  const uploadFiles = useCallback(async (filesToUpload: UploadEntry[]) => {
     if (filesToUpload.length === 0) {
       return;
     }
@@ -793,7 +795,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     try {
       const conflicts = await ExplorerService.checkUploadConflictsExplorerUploadConflictsPost({
         destination: currentPath,
-        files: filesToUpload.map((file) => ({ name: file.name, size: file.size })),
+        files: filesToUpload.map((entry) => ({ name: entry.relativePath, size: entry.file.size })),
         overwrite: false,
       });
 
@@ -824,7 +826,7 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
     try {
       const prepareResponse = await ExplorerService.prepareUploadExplorerUploadPreparePost({
         destination: currentPath,
-        files: uploadDialog.files.map((file) => ({ name: file.name, size: file.size })),
+        files: uploadDialog.files.map((entry) => ({ name: entry.relativePath, size: entry.file.size })),
         overwrite: uploadDialog.overwrite,
       });
       uploadOperationCacheRef.current.set(prepareResponse.operation_id, {
@@ -847,17 +849,17 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
         try {
           const apiBaseUrl = getApiBaseUrl();
 
-          for (const file of uploadDialog.files) {
+          for (const entry of uploadDialog.files) {
             const url = new URL(`${apiBaseUrl}/explorer/upload/stream/${encodeURIComponent(prepareResponse.operation_id)}`);
-            url.searchParams.set('filename', file.name);
-            url.searchParams.set('size', String(file.size));
+            url.searchParams.set('filename', entry.relativePath);
+            url.searchParams.set('size', String(entry.file.size));
             url.searchParams.set('overwrite', String(uploadDialog.overwrite));
 
             const response = await fetch(url.toString(), {
               method: 'PUT',
-              body: file,
+              body: entry.file,
               headers: {
-                'Content-Type': file.type || 'application/octet-stream',
+                'Content-Type': entry.file.type || 'application/octet-stream',
               },
             });
 
@@ -871,9 +873,9 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
 
             if (!response.ok) {
               const errorMessage =
-                payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message?: unknown }).message === 'string'
-                  ? (payload as { message: string }).message
-                  : `Failed to upload ${file.name}`;
+                  payload && typeof payload === 'object' && 'message' in payload && typeof (payload as { message?: unknown }).message === 'string'
+                    ? (payload as { message: string }).message
+                  : `Failed to upload ${entry.relativePath}`;
 
               throw new Error(errorMessage);
             }
@@ -1329,12 +1331,12 @@ export function ExplorerProvider({ children }: { children: React.ReactNode }) {
       >
         <Stack>
           <Text size="sm" c="dimmed">
-            Upload {uploadDialog.files.length} file{uploadDialog.files.length === 1 ? '' : 's'} into <Code>{currentPath}</Code>.
+            Upload {uploadDialog.files.length} file{uploadDialog.files.length === 1 ? '' : 's'} into <Code>{currentPath}</Code>. Folder structure is preserved.
           </Text>
           {uploadDialog.isCheckingConflicts ? <Text size="sm">Checking for conflicts...</Text> : null}
           <Stack gap={4}>
-            {uploadDialog.files.slice(0, 5).map((file) => (
-              <Code key={`${file.name}-${file.size}`}>{file.name}</Code>
+            {uploadDialog.files.slice(0, 5).map((entry) => (
+              <Code key={`${entry.relativePath}-${entry.file.size}`}>{entry.relativePath}</Code>
             ))}
             {uploadDialog.files.length > 5 ? <Text size="xs" c="dimmed">+{uploadDialog.files.length - 5} more</Text> : null}
           </Stack>

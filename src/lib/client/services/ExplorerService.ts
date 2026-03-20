@@ -17,8 +17,8 @@ import type { LocationUpdateRequest } from '../models/LocationUpdateRequest';
 import type { OperationResponse } from '../models/OperationResponse';
 import type { RenameRequest } from '../models/RenameRequest';
 import type { SearchRequest } from '../models/SearchRequest';
-import { SortBy } from '../models/SortBy';
-import { SortOrder } from '../models/SortOrder';
+import type { SortBy } from '../models/SortBy';
+import type { SortOrder } from '../models/SortOrder';
 import type { UploadPrepareRequest } from '../models/UploadPrepareRequest';
 import type { UploadPrepareResponse } from '../models/UploadPrepareResponse';
 import type { UploadResponse } from '../models/UploadResponse';
@@ -38,8 +38,8 @@ export class ExplorerService {
     public static listDirectoryExplorerListGet(
         path: string,
         showHidden: boolean = false,
-        sortBy: SortBy = SortBy.NAME,
-        sortOrder: SortOrder = SortOrder.ASC,
+        sortBy: SortBy = 'name',
+        sortOrder: SortOrder = 'asc',
     ): CancelablePromise<DirectoryListingResponse> {
         return __request(OpenAPI, {
             method: 'GET',
