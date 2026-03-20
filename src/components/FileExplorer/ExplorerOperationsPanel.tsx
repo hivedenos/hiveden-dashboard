@@ -1,7 +1,8 @@
 'use client';
 
-import { ActionIcon, Badge, Card, Group, Progress, ScrollArea, Stack, Text } from '@mantine/core';
-import { IconPlayerStop, IconRefresh, IconReload, IconTrash, IconWaveSine } from '@tabler/icons-react';
+import { ActionIcon, Badge, Card, Collapse, Group, Progress, ScrollArea, Stack, Text } from '@mantine/core';
+import { IconChevronDown, IconChevronUp, IconPlayerStop, IconRefresh, IconReload, IconTrash, IconWaveSine } from '@tabler/icons-react';
+import { useState } from 'react';
 
 import { useExplorer } from './ExplorerProvider';
 
@@ -10,6 +11,14 @@ export function ExplorerOperationsPanel({ compact = false }: { compact?: boolean
   const activeUploads = operations.filter(
     (operation) => operation.operation_type.includes('upload') && (operation.status === 'pending' || operation.status === 'in_progress'),
   );
+  const [expandedOperations, setExpandedOperations] = useState<Record<string, boolean>>({});
+
+  const toggleExpanded = (operationId: string) => {
+    setExpandedOperations((previous) => ({
+      ...previous,
+      [operationId]: !previous[operationId],
+    }));
+  };
 
   return (
     <Card
@@ -58,8 +67,13 @@ export function ExplorerOperationsPanel({ compact = false }: { compact?: boolean
                 const result = parseOperationResult(operation.result);
                 const summary = getSummary(result);
                 const fileRows = getFileRows(result);
+                const orderedFileRows = [...fileRows].sort(compareFileRows);
                 const byteProgress = getByteProgress(result);
+                const speedMetrics = getSpeedMetrics(result);
+                const timingMetrics = getTimingMetrics(result);
                 const canRetryUpload = (isCancelled || operation.status === 'failed') && operation.operation_type.includes('upload');
+                const hasDetails = Boolean(speedMetrics || timingMetrics || fileRows.length > 0 || operation.error_message);
+                const isExpanded = Boolean(expandedOperations[operation.id]);
 
                 return (
                   <Card key={operation.id} withBorder padding="sm" radius="md">
@@ -113,7 +127,19 @@ export function ExplorerOperationsPanel({ compact = false }: { compact?: boolean
                         <Text size="xs" c="dimmed">
                           {summary?.processed_items ?? operation.processed_items ?? 0}/{summary?.total_items ?? operation.total_items ?? 0} items
                         </Text>
-                        <Text size="xs" c="dimmed">{isDone ? 'Done' : isCancelled ? 'Cancelled' : `${Math.round(isDone ? 100 : progress)}%`}</Text>
+                        <Group gap="xs" wrap="nowrap">
+                          {hasDetails ? (
+                            <ActionIcon
+                              variant="subtle"
+                              size="sm"
+                              aria-label={`${isExpanded ? 'Hide' : 'Show'} details for ${operation.operation_type}`}
+                              onClick={() => toggleExpanded(operation.id)}
+                            >
+                              {isExpanded ? <IconChevronUp size={14} /> : <IconChevronDown size={14} />}
+                            </ActionIcon>
+                          ) : null}
+                          <Text size="xs" c="dimmed">{isDone ? 'Done' : isCancelled ? 'Cancelled' : `${Math.round(isDone ? 100 : progress)}%`}</Text>
+                        </Group>
                       </Group>
 
                       {byteProgress ? (
@@ -136,29 +162,64 @@ export function ExplorerOperationsPanel({ compact = false }: { compact?: boolean
                         <Text size="xs" c="dimmed" truncate>Destination: {operation.destination_path}</Text>
                       ) : null}
 
-                      {fileRows.length > 0 ? (
-                        <Stack gap={4}>
-                          {fileRows.slice(0, compact ? 3 : 5).map((file) => (
-                            <Card key={`${operation.id}-${file.name}`} withBorder padding="xs" radius="sm">
-                            <Stack gap={2}>
-                              <Group justify="space-between" gap="xs" wrap="nowrap">
-                                <Text size="xs" truncate>{file.name}</Text>
-                                <Badge variant="light" color={outcomeColor(file.outcome)}>{file.outcome ?? file.status ?? 'pending'}</Badge>
-                              </Group>
-                              {typeof file.progress === 'number' ? <Progress value={file.progress} size="xs" radius="xl" /> : null}
-                              <Group justify="space-between" gap="xs">
-                                <Text size="xs" c="dimmed">{formatBytes(file.uploaded_bytes ?? 0)} / {formatBytes(file.size ?? 0)}</Text>
-                                {file.error_message ? <Text size="xs" c="red">{file.error_message}</Text> : null}
-                              </Group>
-                            </Stack>
-                            </Card>
-                          ))}
-                        </Stack>
-                      ) : null}
+                      <Collapse in={isExpanded}>
+                        <Stack gap="xs">
+                          {speedMetrics ? (
+                            <Text size="xs" c="dimmed">
+                              Avg {formatSpeed(speedMetrics.average)}
+                              {speedMetrics.current ? ` - Current ${formatSpeed(speedMetrics.current)}` : ''}
+                              {speedMetrics.currentFileAverage ? ` - File avg ${formatSpeed(speedMetrics.currentFileAverage)}` : ''}
+                              {speedMetrics.currentFileCurrent ? ` - File current ${formatSpeed(speedMetrics.currentFileCurrent)}` : ''}
+                            </Text>
+                          ) : null}
+                          {timingMetrics ? (
+                            <Text size="xs" c="dimmed">
+                              {timingMetrics.startedAt ? `Started ${formatDate(timingMetrics.startedAt)}` : ''}
+                              {timingMetrics.elapsedSeconds !== undefined ? `${timingMetrics.startedAt ? ' - ' : ''}Elapsed ${formatDuration(timingMetrics.elapsedSeconds)}` : ''}
+                              {timingMetrics.completedAt ? ` - Completed ${formatDate(timingMetrics.completedAt)}` : ''}
+                            </Text>
+                          ) : null}
 
-                      {operation.error_message ? (
-                        <Text size="xs" c="red">{operation.error_message}</Text>
-                      ) : null}
+                          {orderedFileRows.length > 0 ? (
+                            <ScrollArea.Autosize mah={compact ? 220 : 280} offsetScrollbars>
+                            <Stack gap={4}>
+                              {orderedFileRows.map((file) => (
+                                <Card key={`${operation.id}-${file.name}`} withBorder padding="xs" radius="sm">
+                                  <Stack gap={2}>
+                                    <Group justify="space-between" gap="xs" wrap="nowrap">
+                                      <Text size="xs" truncate>{file.name}</Text>
+                                      <Badge variant="light" color={outcomeColor(file.outcome)}>{file.outcome ?? file.status ?? 'pending'}</Badge>
+                                    </Group>
+                                    {typeof file.progress === 'number' ? <Progress value={file.progress} size="xs" radius="xl" /> : null}
+                                    <Group justify="space-between" gap="xs">
+                                      <Text size="xs" c="dimmed">{formatBytes(file.uploaded_bytes ?? 0)} / {formatBytes(file.size ?? 0)}</Text>
+                                      {file.error_message ? <Text size="xs" c="red">{file.error_message}</Text> : null}
+                                    </Group>
+                                    {(file.average_upload_speed_bytes_per_sec || file.current_upload_speed_bytes_per_sec || file.elapsed_seconds !== undefined) ? (
+                                      <Text size="xs" c="dimmed">
+                                        {file.average_upload_speed_bytes_per_sec ? `Avg ${formatSpeed(file.average_upload_speed_bytes_per_sec)}` : ''}
+                                        {file.current_upload_speed_bytes_per_sec ? `${file.average_upload_speed_bytes_per_sec ? ' - ' : ''}Current ${formatSpeed(file.current_upload_speed_bytes_per_sec)}` : ''}
+                                        {file.elapsed_seconds !== undefined ? `${file.average_upload_speed_bytes_per_sec || file.current_upload_speed_bytes_per_sec ? ' - ' : ''}Elapsed ${formatDuration(file.elapsed_seconds)}` : ''}
+                                      </Text>
+                                    ) : null}
+                                    {(file.started_at || file.completed_at) ? (
+                                      <Text size="xs" c="dimmed">
+                                        {file.started_at ? `Started ${formatDate(file.started_at)}` : ''}
+                                        {file.completed_at ? `${file.started_at ? ' - ' : ''}Completed ${formatDate(file.completed_at)}` : ''}
+                                      </Text>
+                                    ) : null}
+                                  </Stack>
+                                </Card>
+                              ))}
+                            </Stack>
+                            </ScrollArea.Autosize>
+                          ) : null}
+
+                          {operation.error_message ? (
+                            <Text size="xs" c="red">{operation.error_message}</Text>
+                          ) : null}
+                        </Stack>
+                      </Collapse>
                     </Stack>
                   </Card>
                 );
@@ -194,6 +255,39 @@ function getByteProgress(result: Record<string, unknown> | null) {
   return uploaded !== null && total !== null ? { uploaded, total } : null;
 }
 
+function getSpeedMetrics(result: Record<string, unknown> | null) {
+  if (!result) return null;
+
+  const average = typeof result.average_upload_speed_bytes_per_sec === 'number' ? result.average_upload_speed_bytes_per_sec : undefined;
+  const current = typeof result.current_upload_speed_bytes_per_sec === 'number' ? result.current_upload_speed_bytes_per_sec : undefined;
+  const currentFileAverage = typeof result.current_file_average_upload_speed_bytes_per_sec === 'number'
+    ? result.current_file_average_upload_speed_bytes_per_sec
+    : undefined;
+  const currentFileCurrent = typeof result.current_file_current_upload_speed_bytes_per_sec === 'number'
+    ? result.current_file_current_upload_speed_bytes_per_sec
+    : undefined;
+
+  if (average === undefined && current === undefined && currentFileAverage === undefined && currentFileCurrent === undefined) {
+    return null;
+  }
+
+  return { average, current, currentFileAverage, currentFileCurrent };
+}
+
+function getTimingMetrics(result: Record<string, unknown> | null) {
+  if (!result) return null;
+
+  const startedAt = typeof result.started_at === 'string' ? result.started_at : undefined;
+  const completedAt = typeof result.completed_at === 'string' ? result.completed_at : undefined;
+  const elapsedSeconds = typeof result.elapsed_seconds === 'number' ? result.elapsed_seconds : undefined;
+
+  if (!startedAt && !completedAt && elapsedSeconds === undefined) {
+    return null;
+  }
+
+  return { startedAt, completedAt, elapsedSeconds };
+}
+
 function getFileRows(result: Record<string, unknown> | null) {
   if (!result || !Array.isArray(result.files)) return [];
   return result.files.map((file) => {
@@ -207,8 +301,35 @@ function getFileRows(result: Record<string, unknown> | null) {
       status: typeof item.status === 'string' ? item.status : undefined,
       error_message: typeof item.error_message === 'string' ? item.error_message : undefined,
       outcome: typeof nestedResult.outcome === 'string' ? nestedResult.outcome : undefined,
+      started_at: typeof item.started_at === 'string' ? item.started_at : undefined,
+      completed_at: typeof item.completed_at === 'string' ? item.completed_at : undefined,
+      elapsed_seconds: typeof item.elapsed_seconds === 'number' ? item.elapsed_seconds : undefined,
+      average_upload_speed_bytes_per_sec: typeof item.average_upload_speed_bytes_per_sec === 'number'
+        ? item.average_upload_speed_bytes_per_sec
+        : undefined,
+      current_upload_speed_bytes_per_sec: typeof item.current_upload_speed_bytes_per_sec === 'number'
+        ? item.current_upload_speed_bytes_per_sec
+        : undefined,
     };
   });
+}
+
+function compareFileRows(
+  a: ReturnType<typeof getFileRows>[number],
+  b: ReturnType<typeof getFileRows>[number],
+) {
+  return getFileRowRank(a) - getFileRowRank(b);
+}
+
+function getFileRowRank(file: ReturnType<typeof getFileRows>[number]) {
+  const outcome = file.outcome;
+  const status = file.status;
+
+  if (status === 'in_progress') return 0;
+  if (status === 'pending') return 1;
+  if (outcome === 'failed' || outcome === 'cancelled' || outcome === 'skipped' || status === 'failed' || status === 'cancelled') return 2;
+  if (outcome === 'created' || outcome === 'overwritten' || status === 'completed') return 3;
+  return 2;
 }
 
 function formatBytes(bytes: number) {
@@ -242,4 +363,17 @@ function formatDate(value?: string | null) {
   }
 
   return new Date(value).toLocaleString();
+}
+
+function formatSpeed(bytesPerSecond?: number) {
+  if (bytesPerSecond === undefined) return '--';
+  return `${formatBytes(bytesPerSecond)}/s`;
+}
+
+function formatDuration(seconds?: number) {
+  if (seconds === undefined) return '--';
+  if (seconds < 60) return `${seconds.toFixed(1)}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remaining = Math.round(seconds % 60);
+  return `${minutes}m ${remaining}s`;
 }

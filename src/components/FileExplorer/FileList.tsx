@@ -15,7 +15,7 @@ import {
   IconUpload,
   IconVideo,
 } from '@tabler/icons-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { FileEntry } from '@/lib/client';
 
@@ -198,6 +198,35 @@ export function FileList() {
   const closeContextMenu = () => {
     setContextMenu((previous) => ({ ...previous, opened: false }));
   };
+
+  useEffect(() => {
+    if (!contextMenu.opened) {
+      return;
+    }
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target;
+      if (target instanceof Element && target.closest('[data-explorer-context-menu="true"]')) {
+        return;
+      }
+
+      closeContextMenu();
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [contextMenu.opened]);
 
   const submitInlineRename = async (item: FileEntry) => {
     const nextName = renameValue.trim();

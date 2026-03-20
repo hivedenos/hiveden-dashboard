@@ -78,6 +78,12 @@ describe('ExplorerOperationsPanel', () => {
           result: {
             uploaded_bytes: 512,
             total_bytes: 1024,
+            started_at: '2026-03-18T12:00:00Z',
+            completed_at: null,
+            elapsed_seconds: 12.5,
+            average_upload_speed_bytes_per_sec: 256,
+            current_file_average_upload_speed_bytes_per_sec: 128,
+            current_file_current_upload_speed_bytes_per_sec: 64,
             summary: { processed_items: 5, total_items: 10, created: 1, skipped: 1 },
             files: [
               {
@@ -87,6 +93,11 @@ describe('ExplorerOperationsPanel', () => {
                 progress: 50,
                 status: 'in_progress',
                 error_message: null,
+                started_at: '2026-03-18T12:00:00Z',
+                completed_at: null,
+                elapsed_seconds: 6.5,
+                average_upload_speed_bytes_per_sec: 120,
+                current_upload_speed_bytes_per_sec: 80,
                 result: { outcome: 'created' },
               },
             ],
@@ -127,6 +138,15 @@ describe('ExplorerOperationsPanel', () => {
     expect(screen.getAllByText('512 B / 1.0 KB').length).toBeGreaterThan(0);
     expect(screen.getByText('alpha.txt')).toBeDefined();
     expect(screen.getByText('1 created')).toBeDefined();
+
+    fireEvent.click(screen.getByLabelText('Show details for search_files'));
+
+    expect(screen.getByText(/Avg 256 B\/s/)).toBeDefined();
+    expect(screen.getByText(/File avg 128 B\/s/)).toBeDefined();
+    expect(screen.getByText(/File current 64 B\/s/)).toBeDefined();
+    expect(screen.getByText(/Elapsed 12.5s/)).toBeDefined();
+    expect(screen.getByText(/Current 80 B\/s/)).toBeDefined();
+    expect(screen.getByText(/Elapsed 6.5s/)).toBeDefined();
 
     fireEvent.click(screen.getByLabelText('Cancel search_files operation'));
     expect(cancelOperation).toHaveBeenCalledWith('op-1');

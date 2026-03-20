@@ -76,7 +76,7 @@ export function FileContextMenu({ opened, x, y, onClose, targetItem }: FileConte
       offset={0}
       withinPortal
     >
-      <Menu.Dropdown style={{ position: 'fixed', top: y, left: x, zIndex: 9999 }}>
+      <Menu.Dropdown data-explorer-context-menu="true" style={{ position: 'fixed', top: y, left: x, zIndex: 9999 }}>
         <Menu.Label>
             {isMultiSelect ? `${activeSelection.length} items selected` : (singleEntry?.name || singleItemPath || 'Current Folder')}
         </Menu.Label>
