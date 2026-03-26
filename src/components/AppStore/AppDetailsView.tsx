@@ -6,6 +6,7 @@ import {
   getComposePreview,
   installApp,
   listContainersForAdoption,
+  unlinkAppContainer,
   uninstallApp,
 } from "@/actions/app-store";
 import { Terminal } from "@/components/Terminal/Terminal";
@@ -23,9 +24,9 @@ import {
   Image,
   LoadingOverlay,
   Modal,
+  MultiSelect,
   Paper,
   ScrollArea,
-  Select,
   Stack,
   Text,
   Textarea,
@@ -48,6 +49,7 @@ import {
   IconZoomOut,
 } from "@tabler/icons-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import {
   buildPromoteAppIssueUrl,
@@ -67,10 +69,12 @@ const MIN_ZOOM = 1;
 const MAX_ZOOM = 3;
 const ZOOM_STEP = 0.25;
 export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
+  const router = useRouter();
   const [detail, setDetail] = useState<AppDetail>(initialDetail);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [refreshingDetail, setRefreshingDetail] = useState(false);
   const [activeAction, setActiveAction] = useState<"install" | "uninstall" | "adopt" | null>(null);
+  const [unlinkingContainerId, setUnlinkingContainerId] = useState<string | null>(null);
 
   const [installModalOpen, setInstallModalOpen] = useState(false);
   const [autoInstallPrereqs, setAutoInstallPrereqs] = useState(true);
@@ -83,7 +87,7 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
 
   const [linkModalOpen, setLinkModalOpen] = useState(false);
   const [containerOptions, setContainerOptions] = useState<Array<{ value: string; label: string }>>([]);
-  const [selectedContainerId, setSelectedContainerId] = useState<string | null>(null);
+  const [selectedContainerIds, setSelectedContainerIds] = useState<Array<string>>([]);
   const [containersLoading, setContainersLoading] = useState(false);
   const [containersError, setContainersError] = useState<string | null>(null);
 
@@ -105,6 +109,7 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
   const incubatorApp = isIncubatorApp(detail.channel);
   const promotionStatusLabel = getPromotionStatusLabel(detail.promotion_request_status);
   const promotionIssueUrl = useMemo(() => buildPromoteAppIssueUrl(detail), [detail]);
+  const installedContainers = detail.installed_containers ?? [];
 
   const screenshots = useMemo(() => {
     const candidates = detail.image_urls?.filter((url): url is string => !!url) || [];
@@ -170,6 +175,13 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
     }
   };
 
+  const openContainerDetail = useCallback(
+    (containerId: string) => {
+      router.push(`/docker/containers/${containerId}`);
+    },
+    [router],
+  );
+
   const openComposePreview = async () => {
     if (!detail.compose_url) return;
 
@@ -213,13 +225,13 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
       });
 
       setContainerOptions(options);
-      setSelectedContainerId((current) => {
-        if (!current) return null;
-        return options.some((option) => option.value === current) ? current : null;
+      setSelectedContainerIds((current) => {
+        if (current.length === 0) return [];
+        return current.filter((value) => options.some((option) => option.value === value));
       });
     } catch (error) {
       setContainerOptions([]);
-      setSelectedContainerId(null);
+      setSelectedContainerIds([]);
       setContainersError(getErrorMessage(error, "Failed to load containers"));
     } finally {
       setContainersLoading(false);
@@ -228,15 +240,15 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
 
   const openLinkContainerModal = async () => {
     setLinkModalOpen(true);
-    setSelectedContainerId(null);
+    setSelectedContainerIds([]);
     await loadContainersForAdoption();
   };
 
   const handleAdopt = async () => {
-    if (!selectedContainerId) {
+    if (selectedContainerIds.length === 0) {
       notifications.show({
-        title: "Container required",
-        message: "Select a container to link with this app.",
+        title: "Containers required",
+        message: "Select one or more containers to link with this app.",
         color: "yellow",
       });
       return;
@@ -245,7 +257,7 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
     setActiveAction("adopt");
     try {
       const payload: AppAdoptRequest = {
-        container_names_or_ids: [selectedContainerId],
+        container_names_or_ids: selectedContainerIds,
       };
 
       const response = await adoptAppContainers(detail.app_id, payload);
@@ -262,7 +274,7 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
       });
 
       setLinkModalOpen(false);
-      setSelectedContainerId(null);
+      setSelectedContainerIds([]);
 
       await refreshDetail();
     } catch (error) {
@@ -321,6 +333,30 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
       });
     } finally {
       setActiveAction(null);
+    }
+  };
+
+  const handleUnlink = async (containerId: string, containerName: string) => {
+    setUnlinkingContainerId(containerId);
+
+    try {
+      const response = await unlinkAppContainer(detail.app_id, containerId);
+
+      notifications.show({
+        title: "Container unlinked",
+        message: response.message || `${containerName} was removed from ${detail.title}.`,
+        color: "green",
+      });
+
+      await refreshDetail();
+    } catch (error) {
+      notifications.show({
+        title: "Error",
+        message: getErrorMessage(error, "Failed to unlink container"),
+        color: "red",
+      });
+    } finally {
+      setUnlinkingContainerId(null);
     }
   };
 
@@ -581,6 +617,112 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
             )}
         </Box>
       </Paper>
+
+      {detail.installed && installedContainers.length > 0 && (
+        <Paper withBorder radius="lg" p="lg">
+          <Stack gap="sm">
+            <Group justify="space-between" align="end" gap="sm" wrap="wrap">
+              <Text size="xs" c="dimmed" fw={700} tt="uppercase">
+                Installed containers
+              </Text>
+              <Text size="sm" c="dimmed">
+                Open a linked container to inspect logs, configuration, and runtime state.
+              </Text>
+            </Group>
+
+            <Stack gap="xs">
+              {installedContainers.map((container) => {
+                const ownershipLabel = container.external ? "External" : "Adopted";
+                const ownershipColor = container.external ? "violet" : "teal";
+                const canUnlink = container.can_unlink === true;
+                const unlinkDisabledMessage = "Installed by this app and cannot be unlinked.";
+
+                return (
+                  <Paper
+                    key={container.container_id}
+                    withBorder
+                    radius="md"
+                    p="md"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => openContainerDetail(container.container_id)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openContainerDetail(container.container_id);
+                      }
+                    }}
+                    style={{
+                      cursor: "pointer",
+                      textDecoration: "none",
+                      color: "inherit",
+                      background:
+                        "linear-gradient(135deg, rgba(34, 139, 230, 0.04), rgba(18, 184, 134, 0.02))",
+                      transition: "transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease",
+                    }}
+                  >
+                    <Group justify="space-between" align="flex-start" wrap="wrap" gap="sm">
+                      <Stack gap={6} style={{ flex: 1, minWidth: 0 }}>
+                        <Group gap="xs" wrap="wrap">
+                          <Text fw={600}>{container.container_name}</Text>
+                          <Badge size="sm" variant="light" color={ownershipColor}>
+                            {ownershipLabel}
+                          </Badge>
+                        </Group>
+                        <Group gap="xs" wrap="wrap">
+                          <Badge variant="dot" color={container.status === "running" ? "green" : "gray"}>
+                            {container.status || "Unknown status"}
+                          </Badge>
+                          <Text size="xs" c="dimmed">
+                            ID: {container.container_id}
+                          </Text>
+                        </Group>
+                        {container.image && (
+                          <Text size="xs" c="dimmed" style={{ wordBreak: "break-word" }}>
+                            Image: {container.image}
+                          </Text>
+                        )}
+                        {!canUnlink && (
+                          <Text size="xs" c="dimmed">
+                            {unlinkDisabledMessage}
+                          </Text>
+                        )}
+                      </Stack>
+
+                      <Stack gap="xs" align="flex-end">
+                        <Button
+                          variant="outline"
+                          color="blue"
+                          size="xs"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            openContainerDetail(container.container_id);
+                          }}
+                        >
+                          Open details
+                        </Button>
+                        <Button
+                          variant="subtle"
+                          color="red"
+                          size="xs"
+                          disabled={!canUnlink}
+                          loading={unlinkingContainerId === container.container_id}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            void handleUnlink(container.container_id, container.container_name);
+                          }}
+                        >
+                          Remove link
+                        </Button>
+                      </Stack>
+                    </Group>
+                  </Paper>
+                );
+              })}
+            </Stack>
+          </Stack>
+        </Paper>
+      )}
 
       <Paper withBorder radius="lg" p="lg">
         <Group justify="space-between" align="center" mb="sm" wrap="wrap" gap="sm">
@@ -906,7 +1048,7 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
       >
         <Stack gap="md">
           <Text size="sm" c="dimmed">
-            Select an existing Docker container to adopt into this app.
+            Select one or more existing Docker containers to adopt into this app.
           </Text>
 
           {containersError && (
@@ -915,15 +1057,17 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
             </Alert>
           )}
 
-          <Select
-            label="Container"
-            placeholder={containersLoading ? "Loading containers..." : "Select a container"}
+          <MultiSelect
+            label="Containers"
+            placeholder={containersLoading ? "Loading containers..." : "Select one or more containers"}
             data={containerOptions}
-            value={selectedContainerId}
-            onChange={setSelectedContainerId}
+            value={selectedContainerIds}
+            onChange={setSelectedContainerIds}
             searchable
             disabled={containersLoading}
             nothingFoundMessage="No containers found"
+            hidePickedOptions
+            clearable
           />
 
           {!containersLoading && containerOptions.length === 0 && !containersError && (
@@ -948,8 +1092,8 @@ export function AppDetailsView({ initialDetail }: AppDetailsViewProps) {
               <Button variant="default" onClick={() => setLinkModalOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAdopt} loading={activeAction === "adopt"} disabled={!selectedContainerId || containersLoading}>
-                Link container
+              <Button onClick={handleAdopt} loading={activeAction === "adopt"} disabled={selectedContainerIds.length === 0 || containersLoading}>
+                Link containers
               </Button>
             </Group>
           </Group>

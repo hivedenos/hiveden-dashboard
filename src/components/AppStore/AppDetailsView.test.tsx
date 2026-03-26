@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MantineProvider } from "@mantine/core";
 import { afterEach, expect, test, vi } from "vitest";
 import type { AppDetail } from "@/lib/client";
@@ -9,7 +9,9 @@ const mockGetAppDetail = vi.fn();
 const mockGetComposePreview = vi.fn();
 const mockInstallApp = vi.fn();
 const mockListContainersForAdoption = vi.fn();
+const mockUnlinkAppContainer = vi.fn();
 const mockUninstallApp = vi.fn();
+const mockPush = vi.fn();
 
 vi.mock("@/actions/app-store", () => ({
   adoptAppContainers: (...args: unknown[]) => mockAdoptAppContainers(...args),
@@ -17,11 +19,18 @@ vi.mock("@/actions/app-store", () => ({
   getComposePreview: (...args: unknown[]) => mockGetComposePreview(...args),
   installApp: (...args: unknown[]) => mockInstallApp(...args),
   listContainersForAdoption: (...args: unknown[]) => mockListContainersForAdoption(...args),
+  unlinkAppContainer: (...args: unknown[]) => mockUnlinkAppContainer(...args),
   uninstallApp: (...args: unknown[]) => mockUninstallApp(...args),
 }));
 
 vi.mock("@/components/Terminal/Terminal", () => ({
   Terminal: () => <div>Terminal</div>,
+}));
+
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: mockPush,
+  }),
 }));
 
 vi.mock("@/lib/shellClient", () => ({
@@ -74,6 +83,8 @@ function createDetail(overrides: Partial<AppDetail> = {}): AppDetail {
     channel_label: "Incubator",
     installable: false,
     install_block_reason: "Promotion required before install",
+    installed: false,
+    installed_containers: [],
     image_urls: [],
     dependencies: [],
     dependencies_apps: [],
@@ -112,4 +123,157 @@ test("builds a github promote-app issue link for incubator apps", () => {
   expect(href).toContain("extra-info=");
   expect(href).toContain("Origin+Channel%3A+Edge");
   expect(href).toContain("Repository+Path%3A+apps%2Fapp-1");
+});
+
+test("shows linked installed containers for installed apps", () => {
+  const detail = createDetail({
+    installed: true,
+    channel: "stable",
+    installable: true,
+    install_block_reason: null,
+    installed_containers: [
+      {
+        container_id: "container-123",
+        container_name: "paperless-web",
+        status: "running",
+        image: "ghcr.io/example/paperless:latest",
+        external: true,
+        can_unlink: true,
+      },
+    ],
+  });
+
+  renderWithMantine(<AppDetailsView initialDetail={detail} />);
+
+  expect(screen.getByText("Installed containers")).toBeDefined();
+  expect(screen.getByRole("button", { name: "Open details" })).toBeDefined();
+  expect(screen.getByText("running")).toBeDefined();
+  expect(screen.getByText("Image: ghcr.io/example/paperless:latest")).toBeDefined();
+  expect(screen.getByText("External")).toBeDefined();
+  expect(screen.getByText("ID: container-123")).toBeDefined();
+  expect(screen.getByText(/open a linked container/i)).toBeDefined();
+  expect(screen.getByRole("button", { name: "Remove link" })).toBeDefined();
+});
+
+test("shows adopted badge for non-external linked containers", () => {
+  const detail = createDetail({
+    installed: true,
+    channel: "stable",
+    installable: true,
+    install_block_reason: null,
+    installed_containers: [
+      {
+        container_id: "container-456",
+        container_name: "immich-server",
+        status: "exited",
+        external: false,
+        can_unlink: false,
+      },
+    ],
+  });
+
+  renderWithMantine(<AppDetailsView initialDetail={detail} />);
+
+  expect(screen.getByText("Adopted")).toBeDefined();
+  expect((screen.getByRole("button", { name: "Remove link" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(screen.getByText("Installed by this app and cannot be unlinked.")).toBeDefined();
+});
+
+test("unlinks removable adopted containers", async () => {
+  const detail = createDetail({
+    installed: true,
+    channel: "stable",
+    installable: true,
+    install_block_reason: null,
+    installed_containers: [
+      {
+        container_id: "container-789",
+        container_name: "linkable-worker",
+        can_unlink: true,
+      },
+    ],
+  });
+
+  mockUnlinkAppContainer.mockResolvedValue({ message: "Container unlinked" });
+  mockGetAppDetail.mockResolvedValue({ data: detail });
+
+  renderWithMantine(<AppDetailsView initialDetail={detail} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Remove link" }));
+
+  await waitFor(() => {
+    expect(mockUnlinkAppContainer).toHaveBeenCalledWith("app-1", "container-789");
+  });
+  await waitFor(() => {
+    expect(mockGetAppDetail).toHaveBeenCalledWith("app-1");
+  });
+});
+
+test("links multiple containers to an app", async () => {
+  const detail = createDetail({
+    installed: false,
+    channel: "stable",
+    channel_label: "Stable",
+    installable: true,
+    install_block_reason: null,
+  });
+
+  mockListContainersForAdoption.mockResolvedValue({
+    data: [
+      { Id: "container-1", Name: "/app-web", State: "running" },
+      { Id: "container-2", Name: "/app-worker", State: "running" },
+    ],
+  });
+  mockAdoptAppContainers.mockResolvedValue({
+    data: { containers: [{ container_id: "container-1" }, { container_id: "container-2" }] },
+    message: "Containers linked",
+  });
+  mockGetAppDetail.mockResolvedValue({ data: detail });
+
+  renderWithMantine(<AppDetailsView initialDetail={detail} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Link existing container" }));
+
+  const multiSelectInput = await screen.findByPlaceholderText("Select one or more containers");
+  fireEvent.focus(multiSelectInput);
+  fireEvent.click(await screen.findByText("app-web (container-1) · running"));
+  fireEvent.focus(multiSelectInput);
+  fireEvent.click(await screen.findByText("app-worker (container-2) · running"));
+  fireEvent.click(screen.getByRole("button", { name: "Link containers" }));
+
+  await waitFor(() => {
+    expect(mockAdoptAppContainers).toHaveBeenCalledWith("app-1", {
+      container_names_or_ids: ["container-1", "container-2"],
+    });
+  });
+});
+
+test("hides installed containers section when app is not installed", () => {
+  const detail = createDetail({
+    installed: false,
+    installed_containers: [
+      {
+        container_id: "container-123",
+        container_name: "paperless-web",
+      },
+    ],
+  });
+
+  renderWithMantine(<AppDetailsView initialDetail={detail} />);
+
+  expect(screen.queryByText("Installed containers")).toBeNull();
+});
+
+test("hides installed containers section when no linked containers exist", () => {
+  const detail = createDetail({
+    installed: true,
+    channel: "stable",
+    installable: true,
+    install_block_reason: null,
+    installed_containers: [],
+  });
+
+  renderWithMantine(<AppDetailsView initialDetail={detail} />);
+
+  expect(screen.queryByText("Installed containers")).toBeNull();
 });

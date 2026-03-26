@@ -14,6 +14,7 @@ import type { AppPromotionRequestCreate } from '../models/AppPromotionRequestCre
 import type { AppPromotionRequestResponse } from '../models/AppPromotionRequestResponse';
 import type { AppSyncResponse } from '../models/AppSyncResponse';
 import type { AppUninstallRequest } from '../models/AppUninstallRequest';
+import type { SuccessResponse } from '../models/SuccessResponse';
 import type { CancelablePromise } from '../core/CancelablePromise';
 import { OpenAPI } from '../core/OpenAPI';
 import { request as __request } from '../core/request';
@@ -162,6 +163,29 @@ export class AppStoreService {
             },
             body: requestBody,
             mediaType: 'application/json',
+            errors: {
+                422: `Validation Error`,
+            },
+        });
+    }
+    /**
+     * Unlink Adopted App Container
+     * @param appId
+     * @param containerId
+     * @returns SuccessResponse Successful Response
+     * @throws ApiError
+     */
+    public static unlinkAdoptedAppContainerAppStoreAppsAppIdContainersContainerIdDelete(
+        appId: string,
+        containerId: string,
+    ): CancelablePromise<SuccessResponse> {
+        return __request(OpenAPI, {
+            method: 'DELETE',
+            url: '/app-store/apps/{app_id}/containers/{container_id}',
+            path: {
+                'app_id': appId,
+                'container_id': containerId,
+            },
             errors: {
                 422: `Validation Error`,
             },

@@ -2,6 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
+import type { AppInstalledContainer } from './AppInstalledContainer';
 export type AppDetail = {
     catalog_id: string;
     app_id: string;
@@ -38,5 +39,6 @@ export type AppDetail = {
     install?: Record<string, any>;
     search?: Record<string, any>;
     source_updated_at?: (string | null);
+    installed_containers?: Array<AppInstalledContainer>;
 };
 

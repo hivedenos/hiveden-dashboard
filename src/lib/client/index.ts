@@ -16,6 +16,7 @@ export type { AppCacheClearRequest } from './models/AppCacheClearRequest';
 export type { AppCacheClearResponse } from './models/AppCacheClearResponse';
 export type { AppDetail } from './models/AppDetail';
 export type { AppDetailResponse } from './models/AppDetailResponse';
+export type { AppInstalledContainer } from './models/AppInstalledContainer';
 export type { AppInstallRequest } from './models/AppInstallRequest';
 export type { AppInstallResponse } from './models/AppInstallResponse';
 export type { AppListResponse } from './models/AppListResponse';

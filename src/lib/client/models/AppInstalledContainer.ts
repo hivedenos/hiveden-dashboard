@@ -2,7 +2,7 @@
 /* istanbul ignore file */
 /* tslint:disable */
 /* eslint-disable */
-export type AppAdoptedContainer = {
+export type AppInstalledContainer = {
     container_id: string;
     container_name: string;
     image?: (string | null);

@@ -1,8 +1,8 @@
-'use server';
+"use server";
 
-import '@/lib/api';
-import { revalidatePath } from 'next/cache';
-import { AppStoreService, DockerService } from '@/lib/client';
+import "@/lib/api";
+import { revalidatePath } from "next/cache";
+import { AppStoreService, DockerService } from "@/lib/client";
 import type {
   AppAdoptRequest,
   AppCacheClearRequest,
@@ -10,16 +10,16 @@ import type {
   AppPromotionRequestCreate,
   AppUninstallRequest,
   ContainerListResponse,
-} from '@/lib/client';
+} from "@/lib/client";
 
 function buildComposePreviewCandidates(composeUrl: URL) {
   const candidates = [composeUrl.toString()];
 
-  if (composeUrl.hostname !== 'raw.githubusercontent.com') {
+  if (composeUrl.hostname !== "raw.githubusercontent.com") {
     return candidates;
   }
 
-  const segments = composeUrl.pathname.split('/').filter(Boolean);
+  const segments = composeUrl.pathname.split("/").filter(Boolean);
   if (segments.length < 6) {
     return candidates;
   }
@@ -32,12 +32,12 @@ function buildComposePreviewCandidates(composeUrl: URL) {
     const firstDuplicate = directorySegments.slice(-duplicateLength * 2, -duplicateLength);
     const secondDuplicate = directorySegments.slice(-duplicateLength);
 
-    if (firstDuplicate.join('/') !== secondDuplicate.join('/')) {
+    if (firstDuplicate.join("/") !== secondDuplicate.join("/")) {
       continue;
     }
 
     const deduplicatedUrl = new URL(composeUrl.toString());
-    deduplicatedUrl.pathname = `/${[...prefix, ...secondDuplicate, filename].join('/')}`;
+    deduplicatedUrl.pathname = `/${[...prefix, ...secondDuplicate, filename].join("/")}`;
     candidates.push(deduplicatedUrl.toString());
     break;
   }
@@ -45,19 +45,12 @@ function buildComposePreviewCandidates(composeUrl: URL) {
   return candidates;
 }
 
-export async function listApps(params?: {
-  q?: string;
-  category?: string;
-  channel?: string;
-  installed?: boolean;
-  limit?: number;
-  offset?: number;
-}) {
+export async function listApps(params?: { q?: string; category?: string; channel?: string; installed?: boolean; limit?: number; offset?: number }) {
   return AppStoreService.listAppsAppStoreAppsGet(
     params?.q ?? null,
     params?.category ?? null,
     params?.channel ?? null,
-    typeof params?.installed === 'boolean' ? params.installed : null,
+    typeof params?.installed === "boolean" ? params.installed : null,
     params?.limit ?? 50,
     params?.offset,
   );
@@ -73,13 +66,13 @@ export async function getAppDetail(appId: string) {
 
 export async function syncAppCatalog() {
   const result = await AppStoreService.syncCatalogAppStoreSyncPost();
-  revalidatePath('/app-store');
+  revalidatePath("/app-store");
   return result;
 }
 
 export async function installApp(appId: string, payload?: AppInstallRequest) {
   const result = await AppStoreService.installAppAppStoreAppsAppIdInstallPost(appId, payload ?? {});
-  revalidatePath('/app-store');
+  revalidatePath("/app-store");
   return result;
 }
 
@@ -89,27 +82,36 @@ export async function listContainersForAdoption(): Promise<ContainerListResponse
 
 export async function adoptAppContainers(appId: string, payload?: AppAdoptRequest) {
   const result = await AppStoreService.adoptExistingAppContainersAppStoreAppsAppIdAdoptPost(appId, payload ?? {});
-  revalidatePath('/app-store');
+  revalidatePath("/app-store");
   revalidatePath(`/app-store/${encodeURIComponent(appId)}`);
+  return result;
+}
+
+export async function unlinkAppContainer(appId: string, containerId: string) {
+  const result = await AppStoreService.unlinkAdoptedAppContainerAppStoreAppsAppIdContainersContainerIdDelete(appId, containerId);
+  console.log(result);
+  revalidatePath("/app-store");
+  revalidatePath(`/app-store/${encodeURIComponent(appId)}`);
+  revalidatePath(`/docker/containers/${containerId}`);
   return result;
 }
 
 export async function uninstallApp(appId: string, payload?: AppUninstallRequest) {
   const result = await AppStoreService.uninstallAppAppStoreAppsAppIdUninstallPost(appId, payload ?? {});
-  revalidatePath('/app-store');
+  revalidatePath("/app-store");
   return result;
 }
 
 export async function requestAppPromotion(appId: string, payload?: AppPromotionRequestCreate) {
   const result = await AppStoreService.requestAppPromotionAppStoreAppsAppIdPromotionRequestPost(appId, payload ?? {});
-  revalidatePath('/app-store');
+  revalidatePath("/app-store");
   revalidatePath(`/app-store/${encodeURIComponent(appId)}`);
   return result;
 }
 
 export async function clearCatalogCache(payload?: AppCacheClearRequest) {
   const result = await AppStoreService.clearCatalogCacheAppStoreCacheClearPost(payload ?? {});
-  revalidatePath('/app-store');
+  revalidatePath("/app-store");
   return result;
 }
 
@@ -119,17 +121,17 @@ export async function getComposePreview(composeUrl: string) {
   try {
     url = new URL(composeUrl);
   } catch {
-    throw new Error('Invalid compose URL');
+    throw new Error("Invalid compose URL");
   }
 
-  if (url.protocol !== 'https:' && url.protocol !== 'http:') {
-    throw new Error('Unsupported compose URL protocol');
+  if (url.protocol !== "https:" && url.protocol !== "http:") {
+    throw new Error("Unsupported compose URL protocol");
   }
 
   const requestOptions = {
-    cache: 'no-store' as const,
+    cache: "no-store" as const,
     headers: {
-      Accept: 'text/plain, text/yaml, text/x-yaml, application/x-yaml, */*;q=0.8',
+      Accept: "text/plain, text/yaml, text/x-yaml, application/x-yaml, */*;q=0.8",
     },
   };
 
@@ -148,19 +150,17 @@ export async function getComposePreview(composeUrl: string) {
   }
 
   if (!response) {
-    throw new Error(`Failed to fetch compose file (${failureStatus ?? 'unknown'})`);
+    throw new Error(`Failed to fetch compose file (${failureStatus ?? "unknown"})`);
   }
 
   const rawContent = await response.text();
   if (!rawContent.trim()) {
-    throw new Error('Compose file is empty');
+    throw new Error("Compose file is empty");
   }
 
   const maxPreviewLength = 200000;
   const truncated = rawContent.length > maxPreviewLength;
-  const content = truncated
-    ? `${rawContent.slice(0, maxPreviewLength)}\n\n# Preview truncated due to file size.`
-    : rawContent;
+  const content = truncated ? `${rawContent.slice(0, maxPreviewLength)}\n\n# Preview truncated due to file size.` : rawContent;
 
   return {
     content,
